@@ -6,7 +6,7 @@ class AppState {
         this.openTabs = new Map();
         this.activeTab = null;
         this.fileTree = [];
-        this.theme = 'system';
+        this.theme = 'dark';
         this.isCustomQueryMode = false;
     }
 }
@@ -44,7 +44,7 @@ const app = new AppState();
 // Theme Management
 class ThemeManager {
     constructor() {
-        this.theme = localStorage.getItem('theme') || 'system';
+        this.theme = localStorage.getItem('theme') || 'dark';
         this.init();
     }
 
