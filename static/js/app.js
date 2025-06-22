@@ -1039,8 +1039,11 @@ function startFileMonitoring() {
         const data = JSON.parse(event.data);
 
         if (data.type === 'file_tree_update') {
-            app.fileTree = data.data;
-            fileExplorerManager.refresh(data.data);
+            // Only update if it's for the currently selected tab
+            if (data.folder_type === currentExplorerTab) {
+                app.fileTree = data.data;
+                fileExplorerManager.refresh(data.data);
+            }
         }
     };
 
@@ -1244,10 +1247,11 @@ class ManagementActions {
 
                 console.log('Cleanup completed:', data);
 
-                // Refresh file tree to show empty state
-                if (window.fileExplorer && window.fileExplorer.loadFiles) {
-                    window.fileExplorer.loadFiles();
-                }
+                // Always refresh file tree after cleanup to ensure UI is updated
+                // Add a small delay to ensure backend has completed cleanup
+                setTimeout(() => {
+                    refreshFileTree();
+                }, 500);
             } else {
                 throw new Error(data.message || data.error || 'Cleanup failed');
             }
@@ -1691,7 +1695,10 @@ function selectFolderForInput(folderPath) {
             updateInputStatus();
 
             // Refresh file tree to show files from new input folder
-            refreshFileTree();
+            // Add a small delay to ensure backend has updated
+            setTimeout(() => {
+                refreshFileTree();
+            }, 500);
 
             // Close the modal
             closeFolderBrowser();

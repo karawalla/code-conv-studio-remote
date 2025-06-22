@@ -422,20 +422,34 @@ class FileMonitor:
 
     @staticmethod
     def monitor_files():
-        """Monitor file changes in the output directory"""
-        last_tree = {}
+        """Monitor file changes in both input and output directories"""
+        last_trees = {'input': {}, 'output': {}}
 
         while app_state.file_monitor_running:
             try:
-                current_tree = FileManager.get_file_tree(Config.OUTPUT_FOLDER)
-                current_tree_str = json.dumps(current_tree, sort_keys=True)
+                # Monitor output folder
+                output_tree = FileManager.get_file_tree(Config.OUTPUT_FOLDER)
+                output_tree_str = json.dumps(output_tree, sort_keys=True)
 
-                if current_tree_str != last_tree.get('str', ''):
+                if output_tree_str != last_trees['output'].get('str', ''):
                     app_state.file_update_queue.put({
                         'type': 'file_tree_update',
-                        'data': current_tree
+                        'folder_type': 'output',
+                        'data': output_tree
                     })
-                    last_tree['str'] = current_tree_str
+                    last_trees['output']['str'] = output_tree_str
+
+                # Monitor input folder
+                input_tree = FileManager.get_file_tree(app_state.selected_input_folder)
+                input_tree_str = json.dumps(input_tree, sort_keys=True)
+
+                if input_tree_str != last_trees['input'].get('str', ''):
+                    app_state.file_update_queue.put({
+                        'type': 'file_tree_update',
+                        'folder_type': 'input',
+                        'data': input_tree
+                    })
+                    last_trees['input']['str'] = input_tree_str
 
             except Exception as e:
                 logger.error(f"Error monitoring files: {e}")
