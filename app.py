@@ -19,16 +19,17 @@ import mimetypes
 from typing import List, Dict, Any, Optional
 
 from flask_cors import CORS
+from claude_auth import ClaudeAuthManager, EnhancedProcessManager, create_claude_auth_manager
 
 # Application Configuration
 class Config:
     """Application configuration"""
     OUTPUT_FOLDER = os.path.join(os.getcwd(), 'output')
     INPUT_FOLDER = os.path.join(os.getcwd(), 'input')
-    LOG_LEVEL = logging.INFO
+    LOG_LEVEL = logging.DEBUG
     LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
     HOST = '0.0.0.0'
-    PORT = 80
+    PORT = 8080
     DEBUG = True
 
 # Initialize Flask app
@@ -52,8 +53,19 @@ class AppState:
         self.file_monitor_running = False
         self.selected_input_folder = Config.INPUT_FOLDER
         self.processing = False
+        self.auth_manager = None
+        self.enhanced_process_manager = None
 
 app_state = AppState()
+
+# Initialize Claude authentication
+try:
+    app_state.auth_manager = create_claude_auth_manager()
+    app_state.enhanced_process_manager = EnhancedProcessManager(app_state.auth_manager)
+    logger.info("Claude authentication manager initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize Claude authentication: {e}")
+    logger.warning("Running without authentication manager - manual API key may be required")
 
 # File System Operations
 class FileManager:
@@ -491,8 +503,12 @@ class ProcessManager:
                     ProcessManager._handle_message(message)
 
                 except json.JSONDecodeError:
-                    # Skip non-JSON output
-                    pass
+                    # Show raw output that isn't JSON
+                    if line.strip():
+                        app_state.message_queue.put({
+                            'type': 'raw',
+                            'content': line.strip()
+                        })
 
         except Exception as e:
             logger.error(f"Error processing output: {e}")
@@ -537,8 +553,12 @@ class ProcessManager:
     @staticmethod
     def _handle_tool_use(content: Dict[str, Any]):
         """Handle tool use messages"""
-        # Filter out ALL tool use messages to reduce noise
-        return
+        # Show tool use messages for better visibility
+        tool_name = content.get('name', 'unknown')
+        app_state.message_queue.put({
+            'type': 'tool',
+            'content': f"🔧 Using tool: {tool_name}"
+        })
 
     @staticmethod
     def _handle_init_message(message: Dict[str, Any]):
@@ -584,20 +604,29 @@ class ProcessManager:
     @staticmethod
     def _clean_text(text: str) -> str:
         """Clean and filter text output"""
-        # Filter out any mentions of Claude
-        filtered_text = text.replace("Claude", "").replace("claude", "")
-        filtered_text = filtered_text.replace("I'll", "Processing:").replace("I'm", "Currently")
-        filtered_text = filtered_text.replace("Let me", "Starting to")
+        # Replace Claude mentions with Cognidev
+        filtered_text = text.replace("Claude", "Cognidev").replace("claude", "Cognidev")
         return filtered_text
 
     @staticmethod
     def start_process(query: str):
         """Start the Claude process"""
         def run_process():
+            # Use enhanced process manager if available
+            if app_state.enhanced_process_manager:
+                try:
+                    logger.info(f"Starting process with authentication manager for query: {query}")
+                    app_state.enhanced_process_manager.start_process(query, app_state.message_queue)
+                    return
+                except Exception as e:
+                    logger.error(f"Enhanced process manager failed: {e}")
+                    logger.info("Falling back to standard process execution")
+            
+            # Fallback to original implementation
             cmd = [
                 "claude", "-p",
                 query,
-                "--allowedTools", "Read,Write,Bash",
+                "--allowedTools", "Read,Write,Edit,MultiEdit,Bash,Glob,Grep,LS",
                 "--output-format", "stream-json",
                 "--verbose"
             ]
@@ -619,6 +648,17 @@ class ProcessManager:
                 if process.returncode != 0:
                     stderr = process.stderr.read()
                     logger.error(f"Claude process failed with return code {process.returncode}: {stderr}")
+                    
+                    # Check for authentication errors
+                    if process.returncode == 401 or '401' in stderr or 'unauthorized' in stderr.lower():
+                        error_msg = "🔐 Authentication failed. Please check your API key configuration."
+                        
+                        # Try to provide helpful guidance
+                        app_state.message_queue.put({
+                            'type': 'error',
+                            'content': error_msg + "\n\nTo fix: Set CLAUDE_API_KEY environment variable or create ~/.claude/api_key file"
+                        })
+                        return
                     
                     # Provide user-friendly error messages based on return code
                     if process.returncode == 1:
@@ -984,6 +1024,101 @@ def save_context():
         logger.error(f"Error saving context: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
+@app.route('/api/auth/status')
+def get_auth_status():
+    """Get current authentication status"""
+    try:
+        is_authenticated = False
+        claude_version = None
+        auth_method = "Unknown"
+        
+        # Check Claude version and assume if CLI works, auth is handled internally
+        try:
+            version_result = subprocess.run(['claude', '--version'], capture_output=True, text=True, timeout=5)
+            if version_result.returncode == 0:
+                claude_version = version_result.stdout.strip()
+                # If Claude CLI is working, authentication is handled by Claude Code
+                is_authenticated = True
+                auth_method = "Claude CLI (Built-in)"
+        except Exception as e:
+            logger.error(f"Claude CLI test failed: {e}")
+            pass
+        
+        auth_info = {
+            'authenticated': is_authenticated,
+            'claude_version': claude_version,
+            'auth_method': auth_method,
+            'manager_active': bool(app_state.auth_manager),
+        }
+        
+        # Add manager info if available
+        if app_state.auth_manager:
+            auth_info.update({
+                'last_refresh': app_state.auth_manager.last_refresh.isoformat() if app_state.auth_manager.last_refresh else None,
+                'refresh_interval': app_state.auth_manager.refresh_interval,
+            })
+        
+        return jsonify(auth_info)
+        
+    except Exception as e:
+        logger.error(f"Error getting auth status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/auth/refresh', methods=['POST'])
+def refresh_auth():
+    """Manually trigger authentication refresh"""
+    try:
+        if not app_state.auth_manager:
+            return jsonify({
+                'success': False,
+                'error': 'Authentication manager not initialized'
+            }), 400
+        
+        app_state.auth_manager._refresh_auth()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Authentication refreshed successfully',
+            'last_refresh': app_state.auth_manager.last_refresh.isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error refreshing auth: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/auth/update-key', methods=['POST'])
+def update_api_key():
+    """Update the Claude API key"""
+    try:
+        data = request.json
+        api_key = data.get('api_key')
+        
+        if not api_key:
+            return jsonify({
+                'success': False,
+                'error': 'API key is required'
+            }), 400
+        
+        if not app_state.auth_manager:
+            # Create new auth manager with the provided key
+            app_state.auth_manager = ClaudeAuthManager(api_key)
+            app_state.auth_manager.start_refresh_daemon()
+            app_state.enhanced_process_manager = EnhancedProcessManager(app_state.auth_manager)
+        else:
+            # Update existing manager
+            app_state.auth_manager.update_api_key(api_key)
+        
+        # Test the new key
+        is_valid = app_state.auth_manager.test_authentication()
+        
+        return jsonify({
+            'success': is_valid,
+            'message': 'API key updated successfully' if is_valid else 'Invalid API key',
+            'authenticated': is_valid
+        })
+    except Exception as e:
+        logger.error(f"Error updating API key: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
 # Application Entry Point
 if __name__ == '__main__':
     try:
@@ -995,5 +1130,11 @@ if __name__ == '__main__':
         logger.error(f"Application error: {e}")
     finally:
         FileMonitor.stop_monitoring()
+        
+        # Stop authentication refresh daemon
+        if app_state.auth_manager:
+            app_state.auth_manager.stop_refresh_daemon()
+            logger.info("Stopped authentication refresh daemon")
+        
         logger.info("Application shutdown complete")
 

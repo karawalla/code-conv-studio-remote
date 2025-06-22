@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(sudo systemctl:*)",
+      "Bash(sudo rm:*)",
+      "Bash(sudo journalctl:*)",
+      "Bash(curl:*)",
+      "Bash(claude auth status)",
+      "Bash(claude login --help)",
+      "Bash(claude --version)",
+      "Bash(claude:*)"
+    ],
+    "deny": []
+  }
+}

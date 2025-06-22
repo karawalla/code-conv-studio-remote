@@ -1,7 +1,7 @@
-# Spring Boot to MuleSoft Repository-Level Migration Plan Prompt
+# Spring Boot to Ship Format Repository-Level Migration Plan Prompt
 
 ## Objective
-Generate a comprehensive repository-level migration plan for converting a Spring Boot application to MuleSoft, providing project overview, structure analysis, and phased conversion strategy.
+Generate a comprehensive repository-level migration plan for converting a Spring Boot application to Ship format JSON, providing project overview, structure analysis, and phased conversion strategy.
 
 ## Instructions for Plan Generation
 
@@ -18,24 +18,26 @@ Analyze the Spring Boot project directory to understand:
 List all packages and infer their purpose from naming:
 ```
 com.example.demo
-├── controller     → REST API endpoints
-├── service       → Business logic layer
-├── repository    → Data access layer
-├── model/entity  → Domain objects
-├── config        → Configuration classes
-├── exception     → Custom exceptions
-├── util          → Utility classes
-└── dto           → Data transfer objects
+├── controller     → REST API endpoints (→ HTTP Listener flows)
+├── service       → Business logic layer (→ Transform/Flow Reference)
+├── repository    → Data access layer (→ Database operations)
+├── model/entity  → Domain objects (→ DataWeave schemas)
+├── config        → Configuration classes (→ Global elements)
+├── exception     → Custom exceptions (→ Error handling)
+├── messaging     → JMS/MQ operations (→ JMS Publish)
+├── scheduled     → Scheduled tasks (→ Scheduler flows)
+└── util          → Utility classes (→ DataWeave functions)
 ```
 
 #### C. File Type Distribution
 Count files by type to understand project complexity:
-- Controllers (REST endpoints)
-- Services (business logic)
-- Repositories (data access)
-- Entities (domain models)
-- Configuration files
-- Properties/YAML files
+- Controllers (REST endpoints) → Number of flows needed
+- Services (business logic) → Sub-flows/Flow references
+- Repositories (data access) → Database components
+- Entities (domain models) → DataWeave transformations
+- Scheduled tasks → Scheduler-triggered flows
+- Configuration files → Global elements
+- Properties/YAML files → globalVariables entries
 
 ### 2. Current Spring Boot Project Tree
 
@@ -47,67 +49,56 @@ SpringBootApp/
 │   ├── main/
 │   │   ├── java/
 │   │   │   └── com/example/demo/
-│   │   │       ├── SampleSpringBootAppApplication.java
+│   │   │       ├── [Application].java
 │   │   │       ├── controller/
-│   │   │       │   └── [Controller files]
+│   │   │       │   └── [REST Controllers]
 │   │   │       ├── service/
-│   │   │       │   └── [Service files]
+│   │   │       │   └── [Service classes]
 │   │   │       ├── repository/
-│   │   │       │   └── [Repository files]
-│   │   │       └── model/
-│   │   │           └── [Entity files]
+│   │   │       │   └── [Repository interfaces]
+│   │   │       ├── model/
+│   │   │       │   └── [Entity classes]
+│   │   │       ├── messaging/
+│   │   │       │   └── [JMS producers/consumers]
+│   │   │       └── scheduled/
+│   │   │           └── [Scheduled tasks]
 │   │   └── resources/
 │   │       ├── application.properties
-│   │       ├── static/
-│   │       └── templates/
+│   │       ├── application-{profile}.properties
+│   │       └── static/
 │   └── test/
 │       └── java/
 └── target/
 ```
 
-### 3. Proposed MuleSoft Project Structure
+### 3. Proposed Ship Format Structure
 
-Design the target Mule application structure:
+Design the Ship format output structure:
 ```
-mule-app/
-├── mule-artifact.json
-├── pom.xml
-├── src/
-│   ├── main/
-│   │   ├── mule/
-│   │   │   ├── global/
-│   │   │   │   ├── global-config.xml
-│   │   │   │   ├── http-config.xml
-│   │   │   │   └── db-config.xml
-│   │   │   ├── api/
-│   │   │   │   ├── [entity]-api-flows.xml
-│   │   │   │   └── api-error-handler.xml
-│   │   │   ├── business/
-│   │   │   │   └── [entity]-business-logic.xml
-│   │   │   ├── data/
-│   │   │   │   └── [entity]-data-access.xml
-│   │   │   └── common/
-│   │   │       ├── transformations.dwl
-│   │   │       └── error-handling.xml
-│   │   ├── resources/
-│   │   │   ├── api/
-│   │   │   │   └── [api-spec].raml
-│   │   │   ├── properties/
-│   │   │   │   ├── application.properties
-│   │   │   │   ├── application-dev.properties
-│   │   │   │   └── application-prod.properties
-│   │   │   ├── schemas/
-│   │   │   │   └── [entity]-schema.json
-│   │   │   └── log4j2.xml
-│   │   └── java/
-│   │       └── com/example/
-│   │           └── [Custom Java classes if needed]
-│   └── test/
-│       └── munit/
-│           ├── [entity]-api-test-suite.xml
-│           └── [entity]-business-test-suite.xml
-└── exchange-docs/
-    └── home.md
+ship-output/
+├── ship_output.json
+│   ├── flows[]
+│   │   ├── HTTP endpoint flows
+│   │   ├── Scheduled task flows
+│   │   └── Sub-flows for services
+│   ├── globalElements[]
+│   │   ├── HTTP_Listener_Configuration
+│   │   ├── Database_Configuration
+│   │   ├── File_Configuration
+│   │   ├── JMS_Configuration
+│   │   └── HTTP_Request_Configuration
+│   ├── globalConfig[]
+│   │   └── [Mirror of globalElements configs]
+│   ├── globalVariables{}
+│   │   └── [All application.properties as structured objects]
+│   └── projectInformation{}
+│       ├── sourceProjectType: "SpringBoot"
+│       ├── destinationPlatform: "mule"
+│       └── summary{}
+└── documentation/
+    ├── component-mapping.md
+    ├── flow-documentation.md
+    └── migration-notes.md
 ```
 
 ### 4. Project Summary Template
@@ -115,167 +106,280 @@ mule-app/
 Generate a summary following this structure:
 
 ```markdown
-# [Project Name] Migration Summary
+# [Project Name] Ship Format Migration Summary
 
 ## Application Overview
 - **Purpose**: [Brief description of what the application does]
-- **Type**: [REST API / Web Application / Microservice]
+- **Type**: [REST API / Web Application / Microservice / Batch Processing]
 - **Current Stack**: Spring Boot [version], Java [version]
-- **Target Stack**: MuleSoft 4.x, Anypoint Platform
+- **Target Format**: Ship JSON format for integration platform import
 
 ## Functional Domains
-[List the main functional areas, e.g., User Management, Order Processing]
+[List the main functional areas, e.g., File Processing, Order Management, User Services]
 
 ## API Endpoints Summary
 - Total Endpoints: [count]
 - HTTP Methods Used: [GET, POST, PUT, DELETE, etc.]
 - Base Path: [e.g., /api]
-- Main Resources: [e.g., /users, /orders]
+- Main Resources: [e.g., /files/process, /orders, /users]
+
+## Scheduled Tasks Summary
+- Total Scheduled Tasks: [count]
+- Types: [Fixed delay, Fixed rate, Cron expressions]
+- Purpose: [File cleanup, batch processing, etc.]
 
 ## Data Persistence
 - Database Type: [MySQL/PostgreSQL/Oracle/etc.]
-- Connection Details: [host:port/database]
+- Connection Pattern: [JPA/JDBC]
 - Tables/Entities: [count and list]
 
-## External Integrations
-[List any external systems, APIs, or services integrated]
+## Integration Points
+- File Operations: [Read/Write patterns]
+- JMS/ActiveMQ: [Queues/Topics used]
+- External HTTP Services: [REST API calls]
 
 ## Configuration Overview
 - Profiles: [dev, test, prod]
 - Port: [8080]
-- Key Properties: [list important configurations]
+- Key Properties: [list all properties for globalVariables]
 ```
 
 ### 5. Migration Strategy Plan
 
-#### Phase 1: Foundation Setup (Week 1)
+#### Stage 1: Foundation Analysis
 ```
 Tasks:
-□ Create Mule project structure
-□ Set up mule-artifact.json
-□ Configure Maven/Gradle build
-□ Set up property files
-□ Configure logging (log4j2.xml)
-□ Create global configuration files
-  - HTTP listener configuration
-  - Database configuration
-  - Error handling strategy
+□ Scan project structure and create inventory
+□ Identify all Spring Boot components
+□ Map application.properties to globalVariables structure
+□ Identify all external configurations needed
+□ Document all integration patterns (DB, JMS, File, HTTP)
+□ Count and categorize all endpoints and scheduled tasks
 ```
 
-#### Phase 2: Data Layer (Week 2)
+#### Stage 2: Global Configuration Setup
 ```
 Tasks:
-□ Create DataWeave type definitions for entities
-□ Implement database sub-flows for each repository
-  - Create [entity]-data-access.xml files
-  - Map CRUD operations to DB connectors
-  - Handle transactions
-□ Test database connectivity
-□ Validate query operations
+□ Create globalElements array with all configurations:
+  - HTTP_Listener_Configuration
+  - Database_Configuration (if DB operations exist)
+  - File_Configuration (if file operations exist)
+  - JMS_Configuration (if messaging exists)
+  - HTTP_Request_Configuration (if external calls exist)
+□ Mirror configurations in globalConfig array
+□ Convert all properties to globalVariables with proper structure:
+  - source: ""
+  - type: "string" (always)
+  - value: "[actual value]"
+□ Ensure all ${property} references have corresponding entries
 ```
 
-#### Phase 3: Business Logic Layer (Week 3)
+#### Stage 3: Flow Design and Component Mapping
 ```
 Tasks:
-□ Convert service classes to business sub-flows
-  - Create [entity]-business-logic.xml files
-  - Implement validation logic
-  - Handle business exceptions
-□ Create reusable DataWeave modules
-□ Implement cross-cutting concerns
+□ Design flows for each REST endpoint:
+  - HTTP Listener as entry point
+  - Transform Message for parameter extraction
+  - Business logic components
+  - Response formatting
+□ Design flows for each @Scheduled method:
+  - Scheduler as entry point
+  - Processing logic components
+□ Map Spring patterns to Ship components:
+  - @GetMapping/@PostMapping → HTTP Listener
+  - @RequestParam → attributes.queryParams extraction
+  - @PathVariable → attributes.uriParams extraction
+  - @Scheduled → Scheduler component
+  - Repository methods → Database operations
+  - File operations → File Read/Write/List
+  - JmsTemplate → JMS Publish
+  - RestTemplate/WebClient → HTTP Request
 ```
 
-#### Phase 4: API Layer (Week 4)
+#### Stage 4: Component Structure Implementation
 ```
 Tasks:
-□ Convert REST controllers to API flows
-  - Create [entity]-api-flows.xml files
-  - Configure HTTP listeners for each endpoint
-  - Map request/response transformations
-□ Implement API error handling
-□ Add RAML/OAS documentation
+□ Implement proper component structure for each flow:
+  - All required fields in exact order
+  - Valid UUID v4 for all doc:id attributes
+  - Proper sequenceId progression
+  - Correct parentId relationships
+  - Accurate activityType assignments
+□ Create branching logic using links:
+  - xpath conditions for if/else patterns
+  - otherwise links for default cases
+  - No choice components
+□ Implement error handling:
+  - Raise Error with "description" attribute
+  - Proper error types (VALIDATION:NULL, etc.)
 ```
 
-#### Phase 5: Testing & Validation (Week 5)
+#### Stage 5: Business Logic Conversion
 ```
 Tasks:
-□ Create MUnit test suites
-□ Migrate unit tests to MUnit
-□ Integration testing
-□ Performance testing
-□ Security validation
+□ Convert service methods to appropriate patterns:
+  - Simple logic → Transform Message
+  - Complex logic → Flow Reference to sub-flow
+  - Conditional logic → Link-based branching
+□ Handle data transformations:
+  - Entity mappings → DataWeave in Transform Message
+  - JSON processing → DataWeave scripts
+□ Convert validation logic:
+  - Bean validation → DataWeave validation
+  - Custom validators → Transform Message with conditions
+```
+
+#### Stage 6: Data Access Layer Conversion
+```
+Tasks:
+□ Map repository operations to Database components:
+  - findById() → Database Select with parameters
+  - save() → Database Insert/Update
+  - delete() → Database Delete
+  - Custom queries → Database Select with SQL
+□ Handle transactions:
+  - @Transactional → Proper flow error handling
+□ Convert entity relationships:
+  - JPA mappings → DataWeave transformations
+```
+
+#### Stage 7: Integration Components
+```
+Tasks:
+□ Convert file operations:
+  - new File() checks → File List with sizeOf(payload)
+  - File reading → File Read
+  - File writing → File Write with proper content
+□ Convert JMS operations:
+  - JmsTemplate.send() → JMS Publish
+  - Message formatting → Transform Message before publish
+□ Convert external HTTP calls:
+  - RestTemplate/WebClient → HTTP Request
+  - Request/Response handling → Transform Message
+```
+
+#### Stage 8: Testing and Validation
+```
+Tasks:
+□ Validate JSON structure:
+  - All required fields present
+  - Proper data types
+  - Valid UUID formats
+□ Verify flow connectivity:
+  - All components linked
+  - No orphan components
+  - Proper branching logic
+□ Check completeness:
+  - All endpoints converted
+  - All scheduled tasks included
+  - All properties in globalVariables
+□ Validate component naming:
+  - Follows camelCase conventions
+  - Descriptive and unique names
 ```
 
 ### 6. Component Mapping Summary
 
 Generate a high-level mapping table:
 
-| Spring Component | Count | Mule Component | Files |
-|-----------------|-------|----------------|-------|
-| @RestController | X | HTTP Listener + Flow | api/*.xml |
-| @Service | X | Sub-flow | business/*.xml |
-| @Repository | X | DB Connector | data/*.xml |
-| @Entity | X | DataWeave Types | schemas/*.json |
-| @Configuration | X | Global Elements | global/*.xml |
+| Spring Component | Count | Ship Component | Flow Pattern |
+|-----------------|-------|----------------|--------------|
+| @RestController | X | HTTP Listener + Flow | One flow per endpoint |
+| @GetMapping | X | HTTP Listener | Extract path/query params |
+| @PostMapping | X | HTTP Listener | Process request body |
+| @Scheduled | X | Scheduler | Scheduler-triggered flow |
+| @Service | X | Transform/Flow Reference | Business logic pattern |
+| @Repository | X | Database operations | DB Select/Insert/Update |
+| @Entity | X | DataWeave schemas | Transform Message |
+| JmsTemplate | X | JMS Publish | Message publishing |
+| File operations | X | File Read/Write/List | File handling |
+| @Value | X | globalVariables | Property references |
 
 ### 7. Risk Assessment Matrix
 
 | Risk Category | Description | Impact | Mitigation Strategy |
 |--------------|-------------|---------|-------------------|
-| **Technical Risks** |
-| Spring AOP | Aspects need manual conversion | Medium | Use Mule interceptors |
-| Custom Annotations | No direct equivalent | Low | Document and refactor |
-| Spring Security | Different security model | High | Implement Mule security |
-| **Integration Risks** |
-| External Libraries | May not be compatible | Medium | Find Mule alternatives |
-| Database Transactions | Different handling | Medium | Use Mule transaction scope |
-| **Performance Risks** |
-| Large payloads | Memory management differs | Medium | Implement streaming |
-| Concurrent requests | Thread model different | Low | Configure Mule threads |
+| **Conversion Risks** |
+| Complex Logic | Nested conditions/loops | Medium | Use proper link branching |
+| UUID Generation | Invalid doc:id values | High | Validate UUID v4 format |
+| Property References | Missing globalVariables | Medium | Scan all ${} references |
+| **Component Risks** |
+| Advanced Operations | Using restricted components | High | Stick to allowed set |
+| Branching Logic | Choice component usage | Medium | Use link-based control |
+| File Operations | Advanced file operations | Low | Use basic read/write only |
+| **Structure Risks** |
+| Component Order | Wrong sequencing | Medium | Follow execution flow |
+| Parent-Child Relations | Incorrect parentId | High | Validate relationships |
+| Link Connectivity | Orphan components | High | Verify all links |
 
-### 8. Dependency Analysis
+### 8. Validation Checklist Generator
 
-List external dependencies and their Mule equivalents:
-
-| Spring Dependency | Purpose | Mule Alternative |
-|------------------|---------|------------------|
-| spring-boot-starter-web | REST API | HTTP Connector |
-| spring-boot-starter-data-jpa | Database ORM | Database Connector |
-| spring-boot-starter-mail | Email sending | Email Connector |
-| jackson | JSON processing | DataWeave |
-| lombok | Code generation | Native Java |
-
-### 9. Migration Checklist Generator
-
-Create a comprehensive checklist:
+Create a comprehensive validation checklist:
 
 ```markdown
-## Pre-Migration Checklist
-- [ ] Inventory all endpoints
-- [ ] Document business logic
-- [ ] List all external integrations
-- [ ] Identify security requirements
-- [ ] Plan data migration strategy
+## Pre-Conversion Checklist
+- [ ] Inventory all REST endpoints
+- [ ] List all scheduled tasks
+- [ ] Document all external integrations
+- [ ] Extract all application properties
+- [ ] Identify file operation patterns
+- [ ] List JMS/messaging usage
 
-## Migration Execution Checklist
-- [ ] Set up development environment
-- [ ] Create project structure
-- [ ] Migrate configurations
-- [ ] Convert data access layer
-- [ ] Convert business logic
-- [ ] Convert API layer
-- [ ] Implement security
-- [ ] Create tests
-- [ ] Performance optimization
-- [ ] Documentation
+## Conversion Execution Checklist
+- [ ] Create proper JSON structure
+- [ ] Generate valid UUIDs for all doc:id
+- [ ] Map all endpoints to flows
+- [ ] Convert all scheduled tasks
+- [ ] Include all global configurations
+- [ ] Add all properties to globalVariables
+- [ ] Implement proper error handling
+- [ ] Create link-based branching
+- [ ] Validate component structure
+- [ ] Check naming conventions
 
-## Post-Migration Checklist
-- [ ] Functional testing complete
-- [ ] Performance benchmarking
-- [ ] Security audit
-- [ ] Documentation updated
-- [ ] Deployment procedures defined
-- [ ] Monitoring configured
+## Post-Conversion Checklist
+- [ ] JSON structure validation
+- [ ] UUID format verification
+- [ ] Flow connectivity check
+- [ ] Component completeness
+- [ ] Global variable coverage
+- [ ] Error handling review
+- [ ] Documentation complete
+```
+
+### 9. Common Patterns Reference
+
+#### REST Endpoint Pattern:
+```
+1. HTTP Listener (start: "true")
+2. Transform Message (extract parameters)
+3. Business logic components
+4. Database/File/JMS operations
+5. Response formatting
+```
+
+#### Scheduled Task Pattern:
+```
+1. Scheduler (start: "true")
+2. Trigger logic components
+3. Processing operations
+4. Result handling
+```
+
+#### Error Handling Pattern:
+```
+- Validation failure → Raise Error (VALIDATION:NULL)
+- Not found → Raise Error (VALIDATION:NULL)
+- Database error → Raise Error (DB:CONNECTIVITY)
+```
+
+#### File Processing Pattern:
+```
+1. File List (check existence)
+2. Conditional branching (xpath: sizeOf(payload))
+3. File Read (if exists)
+4. Process content
+5. File Write (results)
 ```
 
 ### 10. Output Format
@@ -283,43 +387,47 @@ Create a comprehensive checklist:
 The migration plan should be generated as a structured markdown document:
 
 ```markdown
-# [Application Name] Spring Boot to MuleSoft Migration Plan
+# [Application Name] Spring Boot to Ship Format Migration Plan
 
 ## Executive Summary
-[High-level overview of the migration project]
+[High-level overview of the migration to Ship format]
 
 ## Current State Analysis
-[Include project tree, package analysis, component counts]
+[Include project tree, component counts, integration patterns]
 
-## Target Architecture
-[Include proposed Mule structure, component mapping]
+## Target Ship Format Structure
+[JSON structure overview, component mapping]
 
 ## Migration Strategy
-[Phased approach with timelines]
+[Staged approach without specific timelines]
+
+## Component Mapping Details
+[Detailed mapping of Spring to Ship components]
+
+## Global Configuration Requirements
+[List of globalElements, globalVariables needed]
 
 ## Risk Assessment
-[Technical, integration, and performance risks]
+[Technical and structural risks with mitigation]
 
-## Resource Requirements
-[Team, tools, timeline, budget estimates]
-
-## Success Criteria
-[Measurable outcomes and acceptance criteria]
+## Validation Criteria
+[Checklist for ensuring correct Ship format]
 
 ## Appendices
-- Component Mapping Details
-- Dependency Analysis
-- Configuration Mapping
-- Testing Strategy
+- Complete Component Inventory
+- Property Mapping Table
+- Flow Design Patterns
+- Common Conversion Examples
 ```
 
 ## Usage Instructions
 
 1. Run this analysis on the Spring Boot project root directory
-2. Use file system scanning to gather project structure (avoid reading file contents)
-3. Generate counts and summaries based on file names and directory structure
-4. Create visual tree representations using ASCII art
-5. Output a comprehensive migration plan document
-6. Focus on high-level strategy rather than implementation details
+2. Use file system scanning to gather project structure
+3. Generate counts and summaries based on file names and patterns
+4. Create component mapping based on Spring annotations
+5. Design Ship format JSON structure following specification
+6. Focus on structural conversion rather than timeline-based phases
+7. Emphasize validation and correctness of Ship format output
 
-This prompt ensures efficient repository-level planning without the overhead of analyzing individual file contents, providing a clear roadmap for the Spring Boot to MuleSoft migration project.
+This prompt ensures efficient repository-level planning for Spring Boot to Ship format conversion, providing a clear roadmap without timeline constraints while maintaining focus on the specific requirements of the Ship JSON specification.

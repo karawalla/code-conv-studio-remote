@@ -2166,3 +2166,57 @@ window.closeContextModal = closeContextModal;
 window.deleteItem = deleteItem;
 window.closeFolderBrowser = closeFolderBrowser;
 window.confirmFolderSelection = confirmFolderSelection;
+
+// Authentication Status Function
+async function checkAuthStatus() {
+    const btn = document.getElementById('authStatusBtn');
+    const originalIcon = btn.innerHTML;
+    
+    // Show loading state
+    btn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="loading-spin">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+    `;
+    
+    try {
+        const response = await fetch('/api/auth/status');
+        const data = await response.json();
+        
+        // Create status message
+        let statusMsg = `Claude Authentication Status\n\n`;
+        statusMsg += `✅ Authenticated: ${data.authenticated ? 'Yes' : 'No'}\n`;
+        
+        if (data.claude_version) {
+            statusMsg += `📦 Claude Version: ${data.claude_version}\n`;
+        }
+        
+        statusMsg += `🔐 Auth Method: ${data.auth_method}\n`;
+        statusMsg += `🛠️ Manager Active: ${data.manager_active ? 'Yes' : 'No'}\n`;
+        
+        if (data.last_refresh) {
+            const refreshTime = new Date(data.last_refresh).toLocaleString();
+            statusMsg += `🔄 Last Refresh: ${refreshTime}\n`;
+        }
+        
+        if (data.refresh_interval) {
+            statusMsg += `⏱️ Refresh Interval: ${data.refresh_interval}s\n`;
+        }
+        
+        // Show status based on authentication state
+        if (data.authenticated) {
+            alert(statusMsg + '\n🟢 System is ready for processing');
+        } else {
+            alert(statusMsg + '\n🔴 Claude CLI authentication required');
+        }
+        
+    } catch (error) {
+        console.error('Error checking auth status:', error);
+        alert('❌ Failed to check authentication status\n\nError: ' + error.message);
+    } finally {
+        // Restore original icon
+        btn.innerHTML = originalIcon;
+    }
+}
+
+window.checkAuthStatus = checkAuthStatus;

@@ -29,7 +29,21 @@
       "Bash(git branch:*)",
       "Bash(mkdir:*)",
       "Bash(rm:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(env)",
+      "Bash(find:*)",
+      "Bash(claude --version)",
+      "Bash(claude auth status)",
+      "Bash(sudo mkdir:*)",
+      "Bash(sudo cp:*)",
+      "Bash(sudo chown:*)",
+      "Bash(sudo claude:*)",
+      "Bash(sudo rm:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(touch:*)",
+      "Bash(cp:*)",
+      "Bash(diff:*)"
     ],
     "deny": []
   }

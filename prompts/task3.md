@@ -1,2 +1,4 @@
-
-Your task is to analyze the Java code in the input folder, understand everything in the Java code very carefully, break it down and provide a summary of the code first, then look at the ship.md file in the prompts folder. This is the Is the information, rules, schema, and precise details on how to generate the ship JSON format json file in output/ship_output.json. Very thoroughly follow the schema.md information in generating the output, particularly the rules and formats. Some of the assumptions and mappings should not go beyond the ship.md. Try to come up with additional advanced architectures, but just stick to what the ship format supports.
+Your task is to analyze the Java code in the input folder, understand everything in the Java code very carefully.
+Look at the ship.md file in the prompts folder. This is the Is the information, rules, schema, and precise details on how to generate the ship JSON format json file in output/ship_output.json. 
+Very thoroughly follow the ship.md information in generating the output.
+provide a well formatted output. list all java core findings. list all ship rules/format items as visual appealign list. then tasks

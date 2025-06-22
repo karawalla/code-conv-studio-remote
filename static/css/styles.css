@@ -2608,3 +2608,28 @@ input[type="text"]:focus,
 .file-item:has(.delete-btn) .name {
     padding-right: 40px;
 }
+
+/* Authentication Status Button - Hidden but accessible */
+.auth-status-btn {
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+}
+
+.auth-status-btn:hover {
+    opacity: 1;
+}
+
+.auth-status-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Loading animation for auth status */
+.loading-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
