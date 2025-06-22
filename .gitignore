@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Flask
+instance/
+.webassets-cache
+
+# Logs
+*.log
+nohup.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Output directories
+output/
+input/
+uploads/
+downloads/
+
+# Environment variables
+.env
+.env.local
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+
+# MacOS
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/

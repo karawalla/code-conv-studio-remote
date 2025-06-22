@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(./setup-remote.sh)",
+      "Bash(./full-setup.sh)",
+      "Bash(ssh:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "Bash(./deploy-app.sh:*)",
+      "Bash(ssh -i \"aqclaude.pem\" -o StrictHostKeyChecking=no ubuntu@ec2-18-117-154-176.us-east-2.compute.amazonaws.com \"cd /home/ubuntu/code-conv-studio && grep -B2 'def files_stream' app.py\")",
+      "Bash(curl:*)",
+      "Bash(./deploy.sh)"
+    ],
+    "deny": []
+  }
+}

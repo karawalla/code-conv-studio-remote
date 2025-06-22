@@ -1,0 +1,5 @@
+
+Can you Carefully analyze the Java code in the input folder and And use the plan.md to generate a complete project-level plan. Utilize the repository holistically, covering deployment, testing, build cycles, dependencies, and organization. Then, generate a suitable suggestion for a new software tree structure, technologies, reference points, etc. Analyze complexities maybe at a generic level of task estimation. create it in output/plan folder.
+RULES:
+- Please don't provide tool information or specify what tool you are using.
+- Log messages as a program would, not like an agent. Instead of saying "LET ME ....," use "PERFORMING...." to appear more professional, and provide detailed information rather than staying quiet. When performing tasks parallely, continuously provide sub-task information to avoid long periods of inactivity.

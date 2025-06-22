@@ -1,0 +1,34 @@
+ship-format-output.json,,
+S.No,Issue,
+1,"The doc:id attribute should contain a UUID, but currently, it has been assigned some text, which is incorrect. It needs to be replaced with a valid UUID format.
+Example:
+doc:id=""26a1a3d4-72b8-403f-befb-80d8dd4054c0""",
+2,"In the Raise Error component, the attribute name is misspelled — instead of description, we got message. This should be corrected to use the proper attribute description.
+Also, the type attribute must follow the correct format: a combination of namespace:identifier (e.g., DB:CONNECTIVITY).",
+3,"In db:config for a MySQL connection, the attribute driverClassName is not required and is considered an extra attribute. It should be removed.",
+4,"In the Transform Message component, the output type is set to application/java, but application/json is preferable and should be used instead.",
+5,"All properties from application.properties or application.yml must be placed under ""globalVariables"" in the MuleSoft JSON.
+Every time such a value is used in a component (like <http:listener-connection> or DB/JMS configs), it should be referenced as ${propertyName}.
+The value should come directly from the Spring config.
+The type should generally be ""string"" unless there's a specific type required.
+
+Sample Format for globalVariables
+
+   ""globalVariables"""": {
+        """"http.port"""": {
+            """"source"""": """""""",
+            """"type"""": """"sring"""",
+            """"value"""": """"8085""""
+        },
+        """"jms.broker.url"""": {
+            """"source"""": """""""",
+            """"type"""": """"string"""",
+            """"value"""": """"tcp://localhost:61616""""
+        }
+    }
+
+Usage of Global Variables
+
+<http:listener-config name=""HTTP_Listener_config"" doc:name=""HTTP Listener config"">
+    <http:listener-connection host=""${http.host}"" port=""${http.port}"" doc:name=""HTTP Listener connection""/>
+</http:listener-config>",

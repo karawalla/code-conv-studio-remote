@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: order-api-test
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+  
+  h2:
+    console:
+      enabled: true
+  
+  data:
+    redis:
+      host: localhost
+      port: 6370  # Different port to avoid conflicts
+  
+  activemq:
+    broker-url: vm://localhost?broker.persistent=false
+    packages:
+      trust-all: true
+  
+  jms:
+    template:
+      default-destination: test.order.queue
+  
+  cache:
+    type: simple  # Use simple cache for tests
+
+server:
+  port: 0  # Random port for tests
+
+logging:
+  level:
+    com.example.orderapi: INFO
+    org.springframework.security: WARN
+    org.springframework.jms: WARN
+    org.hibernate.SQL: WARN
+
+app:
+  jwt:
+    secret: testSecretKey123456789012345678901234567890
+    expiration: 86400000
+  
+  cache:
+    product-ttl: 60
+    user-ttl: 30

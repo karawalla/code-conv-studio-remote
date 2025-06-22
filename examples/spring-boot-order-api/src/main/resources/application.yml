@@ -1,0 +1,91 @@
+spring:
+  application:
+    name: order-api
+  
+  profiles:
+    active: dev
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orderdb
+    username: orderuser
+    password: orderpass
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  
+  activemq:
+    broker-url: tcp://localhost:61616
+    user: admin
+    password: admin
+    packages:
+      trust-all: true
+  
+  jms:
+    template:
+      default-destination: order.queue
+      delivery-mode: persistent
+      priority: 100
+      time-to-live: 36000
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000 # 10 minutes
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.example.orderapi: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.jms: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/order-api.log
+
+app:
+  jwt:
+    secret: mySecretKey123456789012345678901234567890
+    expiration: 86400000 # 24 hours
+  
+  cache:
+    product-ttl: 3600 # 1 hour
+    user-ttl: 1800 # 30 minutes
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
