@@ -10,7 +10,26 @@
       "Bash(./deploy-app.sh:*)",
       "Bash(ssh -i \"aqclaude.pem\" -o StrictHostKeyChecking=no ubuntu@ec2-18-117-154-176.us-east-2.compute.amazonaws.com \"cd /home/ubuntu/code-conv-studio && grep -B2 'def files_stream' app.py\")",
       "Bash(curl:*)",
-      "Bash(./deploy.sh)"
+      "Bash(./deploy.sh)",
+      "Bash(rg:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(sudo lsof:*)",
+      "Bash(sudo kill:*)",
+      "Bash(sudo ps:*)",
+      "Bash(sudo tail:*)",
+      "Bash(sudo python3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

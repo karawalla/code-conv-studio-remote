@@ -1,0 +1,199 @@
+Consolidated Issues Report - SpringBoot to MuleSoft Migration
+===============================================================
+
+This file consolidates all issues from the migration process, including blocker issues from the errors folder.
+
+BLOCKER ISSUES (From errors/issues4.csv)
+----------------------------------------
+
+1. Transform Message config-ref Attribute Issue
+   Issue: One Transform Message connector has the attribute config-ref, which is invalid.
+   Impact: BLOCKER
+   Resolution: The Transform Message component does not require a config-ref attribute and it should be removed.
+
+2. YAML File Formatting Issue  
+   Issue: In the YAML file, keys should not be enclosed in double quotes and a space is required after the colon (:) for proper syntax.
+   Impact: BLOCKER
+   Example Fix:
+   spring.application.name: "fileProcessorHttpListener"
+   server.port: "8085"
+   http.host: "0.0.0.0"
+   spring.activemq.broker-url: "tcp://localhost:61616"
+
+3. Project Information Summary Structure Issue
+   Issue: The summary section under projectInformation is not being generated properly.
+   Impact: BLOCKER
+   Resolution: Must follow the required structure with proper activity counts, migration status, and activity mappings.
+   Required Fields:
+   - totalComponents, totalActivitiesCount, totalFlowCount
+   - totalGroupActivitiesCount, totalGlobalComponentsCount
+   - fullyMigrated, partiallyMigrated, notMigrated
+   - fullMigratedActivities array with mule_activity, SB_activity, and count
+
+4. Complex Business Logic Flow Separation
+   Issue: Complex business logic should be separated into individual flows.
+   Impact: BLOCKER
+   Resolution: Create separate flows for Order, Invoice, and Inventory, and reference them using flow-ref.
+
+ALL ISSUES (From issues folder)
+-------------------------------
+
+From issues/issues.csv (ship-format-output.json):
+
+1. UUID Format Issue
+   Issue: The doc:id attribute should contain a UUID, but currently has text.
+   Resolution: Replace with valid UUID format (e.g., "26a1a3d4-72b8-403f-befb-80d8dd4054c0")
+
+2. Raise Error Component Attribute
+   Issue: Attribute name is misspelled - "message" instead of "description"
+   Resolution: Correct to use "description" attribute with proper format namespace:identifier (e.g., DB:CONNECTIVITY)
+
+3. MySQL Driver Class Extra Attribute
+   Issue: In db:config for MySQL, driverClassName is not required
+   Resolution: Remove the driverClassName attribute
+
+4. Transform Message Output Type
+   Issue: Output type is set to application/java
+   Resolution: Change to application/json
+
+5. Global Variables Configuration
+   Issue: Properties from application.properties/yml must be under "globalVariables"
+   Resolution: Place all properties under globalVariables with proper structure:
+   - Use ${propertyName} references in components
+   - Set type as "string" unless specific type required
+   - Include source, type, and value fields
+
+From issues/issues2.csv:
+
+fileprocess-main.json Issues:
+
+1. Missing doc:id Attributes
+   Issue: doc:id attribute is missing in every mule-snippet
+   Resolution: Add doc:id with UUID format to all components
+
+2. File Read Functionality
+   Issue: File file = new File(filePath) incorrectly replaced with variable
+   Resolution: Use file:read operation:
+   <file:read doc:name="Read" doc:id="4206d28a-4142-4d4d-86b5-10d0c263cd21" config-ref="File_Config" path="/sample.json"/>
+
+3. Invalid XPath Expression
+   Issue: xpath: "#[Java::invoke('java.io.File', 'exists()', vars.file)]" is incorrect
+   Resolution: Working on proper Mule expression syntax
+
+4. HTTPResponse Tag Invalid
+   Issue: HTTPResponse tag doesn't exist in Mule
+   Resolution: Use Listener's Responses tab with proper http:response configuration
+
+5. On-Error-Propagate Missing Attributes
+   Issue: Missing enableNotifications, logException, doc:name, doc:id
+   Resolution: Add all required attributes to error handling
+
+6. Reserved Word in Transform Message
+   Issue: "type" is reserved word in Mule
+   Resolution: Use double quotes: "type" in JSON output
+
+global-config.json Issues:
+
+1. Extra doc:name in HTTP Listener Connection
+   Issue: doc:name inside http:listener-connection is not required
+   Resolution: Remove doc:name attribute
+
+2. Extra doc:name in File Connection
+   Issue: doc:name inside file:connection is not required
+   Resolution: Remove doc:name attribute
+
+3. JMS Config Structure
+   Issue: JMSConfig not in proper structure
+   Resolution: Follow correct Mule JMS configuration format with proper nesting
+
+4. Unnecessary GlobalProperty
+   Issue: GlobalProperty being used unnecessarily
+   Resolution: Remove and reference properties directly
+
+fileprocessor-implementations.json Issues:
+
+1. Extra doc:name in Flow
+   Issue: doc:name in Flow is not required
+   Resolution: Remove doc:name attribute
+
+2. Variable Expression Simplification
+   Issue: .getName() not required in #[lower(vars.file.getName())]
+   Resolution: Simplify to #[lower(vars.file)]
+
+3. Extra doc:name in SubFlow
+   Issue: doc:name in SubFlow is not required
+   Resolution: Remove doc:name attribute
+
+4. FileWrite Structure
+   Issue: FileWrite component not in proper Mule 4 format
+   Resolution: Use correct file:write structure with content element
+
+5. On-Error-Continue Missing Attributes
+   Issue: Missing required attributes
+   Resolution: Add enableNotifications, logException, doc:name, doc:id, type
+
+6. JMS Publish Input Configuration
+   Issue: Need to handle non-payload inputs
+   Resolution: Update jms:message body based on input source
+
+JSON Structure Issues:
+
+1. Parent ID Structure
+   Issue: Parent ID should be [0] for first activity, else [previous activity sequenceId]
+   Resolution: Correct parent ID references in activity sequences
+
+2. Choice Router Handling
+   Issue: choice, when, otherwise shouldn't be activities
+   Resolution: Use links with xpath and condition types
+
+3. Global Variables Placement
+   Issue: Properties not under globalVariables
+   Resolution: Move all properties to globalVariables section
+
+4. Configuration Placement
+   Issue: Configurations not in proper arrays
+   Resolution: Place in globalConfig and globalElements arrays
+
+From issues/ship_output 1-issues.csv:
+
+ship_output 1.json Issues:
+
+1. Raise Error Attribute Name
+   Issue: "message" instead of "description" attribute
+   Resolution: Correct to "description"
+
+2. JMS Config BrokerUrl Placement
+   Issue: brokerUrl not in correct location
+   Resolution: Place under jms:factory-configuration
+
+ship_output.json Issues:
+
+1. Scheduler vs Listener
+   Issue: fileProcessingSchedulerFlow uses listener instead of scheduler
+   Resolution: Replace with proper scheduler component
+
+2. Activity Sequence Misalignment
+   Issue: Generated sequence doesn't match Spring Boot flow
+   Resolution: Correct to: Read File → Write File → Write File → JMS Call
+
+NON-BLOCKER ISSUES (Good to go)
+--------------------------------
+
+From errors/issues4.csv and issues/issues4.csv:
+- Transform Message payload references (can cause errors but not blocking)
+- Variable fileName closing bracket (syntax fix)
+- Variable fileType removal (optimization)
+- Choice condition expression mode
+- File Write DataWeave output format
+- Transform Message DataWeave expressions
+- File exists condition handling with File List
+- Logger activity visibility in JSON
+
+SUMMARY
+-------
+Total Issues Identified: 35
+- Blocker Issues: 4 (from errors folder)
+- Major Issues: 27 (from issues folder)
+- Minor/Good to go Issues: 4
+
+The blocker issues must be resolved before the migration can proceed, while other issues should be addressed to ensure proper functionality and adherence to MuleSoft best practices.

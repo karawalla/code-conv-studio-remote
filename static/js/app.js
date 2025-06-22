@@ -244,10 +244,20 @@ class FileExplorerManager {
             const itemClass = isFolder ? 'folder-item' : 'file-item';
             const extension = isFolder ? '' : item.name.split('.').pop();
 
+            // Add delete button for output folder items
+            const deleteButton = currentExplorerTab === 'output' ? `
+                <button class="delete-btn" onclick="deleteItem('${item.path}', '${item.type}')" title="Delete ${item.type}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            ` : '';
+
             html += `
-                <div class="${itemClass}" data-path="${item.path}" data-extension="${extension}">
+                <div class="${itemClass}" data-path="${item.path}" data-extension="${extension}" data-type="${item.type}">
                     <div class="icon">${iconSvg}</div>
                     <div class="name">${item.name}</div>
+                    ${deleteButton}
                 </div>
             `;
         });
@@ -256,13 +266,17 @@ class FileExplorerManager {
 
         // Add click handlers
         container.querySelectorAll('.folder-item').forEach(folder => {
-            folder.addEventListener('click', () => {
+            folder.addEventListener('click', (e) => {
+                // Don't navigate if clicking on delete button
+                if (e.target.closest('.delete-btn')) return;
                 this.navigateToPath(folder.dataset.path);
             });
         });
 
         container.querySelectorAll('.file-item').forEach(file => {
-            file.addEventListener('click', () => {
+            file.addEventListener('click', (e) => {
+                // Don't select if clicking on delete button
+                if (e.target.closest('.delete-btn')) return;
                 this.selectFile(file.dataset.path);
             });
         });
@@ -529,6 +543,11 @@ function refreshFileTree() {
             // Small delay to show the skeleton effect
             setTimeout(() => {
                 fileExplorerManager.refresh(data.files);
+                
+                // Update info bar if input tab is active
+                if (currentExplorerTab === 'input') {
+                    updateInputFolderInfo();
+                }
             }, 300);
         })
         .catch(error => {
@@ -901,11 +920,68 @@ function switchExplorerTab(tabType) {
     });
     document.getElementById(tabType + 'Tab').classList.add('active');
 
+    // Show/hide input folder info
+    const infoBar = document.getElementById('inputFolderInfo');
+    if (tabType === 'input' && infoBar) {
+        infoBar.style.display = 'block';
+        updateInputFolderInfo();
+    } else if (infoBar) {
+        infoBar.style.display = 'none';
+    }
+
     // Refresh file tree for the selected tab
     refreshFileTree();
 }
 
-// Remove unused function - folder paths are now handled by the backend
+// Update input folder info display
+function updateInputFolderInfo() {
+    const folderPath = document.getElementById('inputFolderPath');
+    const fileCount = document.getElementById('inputFileCount');
+    
+    if (!folderPath || !fileCount) return;
+    
+    // Get current input folder from backend
+    fetch('/api/input')
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists && data.path) {
+                // Extract just the folder name from the full path
+                const pathParts = data.path.split('/');
+                const folderName = pathParts[pathParts.length - 1];
+                
+                folderPath.textContent = folderName;
+                folderPath.title = data.path; // Show full path on hover
+                
+                // Use the total_files count from the API response
+                const count = data.total_files || 0;
+                fileCount.textContent = count + (count === 1 ? ' file' : ' files');
+            } else {
+                folderPath.textContent = 'No folder selected';
+                fileCount.textContent = '0 files';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching input folder info:', error);
+        });
+}
+
+// Helper function to count files in tree
+function countFilesInTree(tree) {
+    let count = 0;
+    
+    function traverse(items) {
+        for (const item of items) {
+            if (item.type === 'file') {
+                count++;
+            } else if (item.type === 'folder' && item.children) {
+                traverse(item.children);
+            }
+        }
+    }
+    
+    traverse(tree);
+    return count;
+}
 
 // Process Management
 function startProcess() {
@@ -1168,58 +1244,16 @@ class ManagementActions {
 
     init() {
         // Bind event listeners
-        document.getElementById('checkInputBtn').addEventListener('click', this.checkInput.bind(this));
-        document.getElementById('cleanupBtn').addEventListener('click', this.cleanupOutput.bind(this));
-    }
-
-    async checkInput() {
-        const button = document.getElementById('checkInputBtn');
-        const status = document.getElementById('inputStatus');
-
-        // Update UI to loading state
-        button.disabled = true;
-        status.textContent = 'Checking...';
-        status.className = 'status-indicator loading';
-
-        try {
-            const response = await fetch('/api/input');
-            const data = await response.json();
-
-            if (response.ok) {
-                if (data.exists) {
-                    status.textContent = `${data.total_files} files (${this.formatFileSize(data.total_size)})`;
-                    status.className = 'status-indicator success';
-
-                    // Log input information
-                    console.log('Input folder info:', data);
-
-                    // Show file types breakdown
-                    if (data.file_types && Object.keys(data.file_types).length > 0) {
-                        const fileTypesText = Object.entries(data.file_types)
-                            .map(([ext, count]) => `${ext}: ${count}`)
-                            .join(', ');
-                        console.log('File types:', fileTypesText);
-                    }
-                } else {
-                    status.textContent = 'Not found';
-                    status.className = 'status-indicator warning';
-                    console.warn('Input folder not found:', data.path);
-                }
-            } else {
-                throw new Error(data.error || 'Failed to check input');
-            }
-        } catch (error) {
-            console.error('Error checking input:', error);
-            status.textContent = 'Error';
-            status.className = 'status-indicator error';
-        } finally {
-            button.disabled = false;
+        const cleanupBtn = document.getElementById('cleanupBtn');
+        if (cleanupBtn) {
+            cleanupBtn.addEventListener('click', this.cleanupOutput.bind(this));
         }
     }
 
+    // checkInput method removed - button no longer exists
+
     async cleanupOutput() {
         const button = document.getElementById('cleanupBtn');
-        const status = document.getElementById('cleanupStatus');
 
         // Confirm action
         if (!confirm('Are you sure you want to delete all files in the output folder? This action cannot be undone.')) {
@@ -1228,8 +1262,6 @@ class ManagementActions {
 
         // Update UI to loading state
         button.disabled = true;
-        status.textContent = 'Cleaning...';
-        status.className = 'status-indicator loading';
 
         try {
             const response = await fetch('/api/cleanup', {
@@ -1242,10 +1274,10 @@ class ManagementActions {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                status.textContent = `Cleaned (${data.items_removed} items)`;
-                status.className = 'status-indicator success';
-
                 console.log('Cleanup completed:', data);
+                
+                // Show success message in logs
+                addLog(`Cleanup completed: ${data.items_removed} items removed`, 'success');
 
                 // Always refresh file tree after cleanup to ensure UI is updated
                 // Add a small delay to ensure backend has completed cleanup
@@ -1257,8 +1289,7 @@ class ManagementActions {
             }
         } catch (error) {
             console.error('Error during cleanup:', error);
-            status.textContent = 'Error';
-            status.className = 'status-indicator error';
+            addLog(`Cleanup error: ${error.message}`, 'error');
         } finally {
             button.disabled = false;
         }
@@ -1449,16 +1480,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Explorer tab buttons
-    document.getElementById('inputTab').addEventListener('click', () => {
-        switchExplorerTab('input');
-    });
+    const inputTab = document.getElementById('inputTab');
+    const outputTab = document.getElementById('outputTab');
+    
+    if (inputTab) {
+        inputTab.addEventListener('click', () => {
+            switchExplorerTab('input');
+        });
+    }
 
-    document.getElementById('outputTab').addEventListener('click', () => {
-        switchExplorerTab('output');
-    });
+    if (outputTab) {
+        outputTab.addEventListener('click', () => {
+            switchExplorerTab('output');
+        });
+    }
 
     // Initialize file tree
     refreshFileTree();
+    
+    // Show input folder info if input tab is active (default)
+    if (currentExplorerTab === 'input') {
+        const infoBar = document.getElementById('inputFolderInfo');
+        if (infoBar) {
+            infoBar.style.display = 'block';
+            updateInputFolderInfo();
+        }
+    }
 
     // Start file monitoring
     startFileMonitoring();
@@ -1468,9 +1515,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Hide file viewer initially
     hideFileViewer();
-
-    // Update input status
-    updateInputStatus();
 });
 
 // Folder Browser Functionality
@@ -1630,26 +1674,7 @@ function confirmFolderSelection() {
     }
 }
 
-function updateInputStatus() {
-    fetch('/api/input')
-        .then(response => response.json())
-        .then(data => {
-            const status = document.getElementById('inputStatus');
-            if (data.exists) {
-                status.textContent = `Input: ${data.total_files} files (${formatFileSize(data.total_size)})`;
-                status.className = 'status-indicator success';
-            } else {
-                status.textContent = 'Input: Not found';
-                status.className = 'status-indicator error';
-            }
-        })
-        .catch(error => {
-            console.error('Error updating input status:', error);
-            const status = document.getElementById('inputStatus');
-            status.textContent = 'Input: Error';
-            status.className = 'status-indicator error';
-        });
-}
+// updateInputStatus function removed - status indicators no longer exist
 
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
@@ -1691,8 +1716,10 @@ function selectFolderForInput(folderPath) {
             const newQuery = currentQuery.replace(/in\s+[^\s]+/, `in ./input`);
             queryInput.value = newQuery;
 
-            // Update input status
-            updateInputStatus();
+            // Update input folder info in the left panel
+            if (currentExplorerTab === 'input') {
+                updateInputFolderInfo();
+            }
 
             // Refresh file tree to show files from new input folder
             // Add a small delay to ensure backend has updated
@@ -1729,9 +1756,413 @@ function selectFolderForInput(folderPath) {
     });
 }
 
+// Rules, Issues, and Core Prompt Functions
+async function viewRules() {
+    const modal = document.getElementById('rulesModal');
+    const content = document.getElementById('rulesContent');
+    
+    modal.style.display = 'flex';
+    content.innerHTML = '<div class="loading-content"><div class="spinner"></div><p>Loading rules...</p></div>';
+    
+    try {
+        const response = await fetch('/api/rules');
+        const data = await response.json();
+        
+        if (data.success) {
+            content.innerHTML = formatRules(data.content);
+        } else {
+            content.innerHTML = `<div class="error-message">Failed to load rules: ${data.error}</div>`;
+        }
+    } catch (error) {
+        console.error('Error loading rules:', error);
+        content.innerHTML = '<div class="error-message">Error loading rules</div>';
+    }
+}
+
+async function viewIssues() {
+    const modal = document.getElementById('issuesModal');
+    const content = document.getElementById('issuesContent');
+    
+    modal.style.display = 'flex';
+    content.innerHTML = '<div class="loading-content"><div class="spinner"></div><p>Loading issues...</p></div>';
+    
+    try {
+        const response = await fetch('/api/issues');
+        const data = await response.json();
+        
+        if (data.success) {
+            content.innerHTML = formatIssues(data.content);
+        } else {
+            content.innerHTML = `<div class="error-message">Failed to load issues: ${data.error}</div>`;
+        }
+    } catch (error) {
+        console.error('Error loading issues:', error);
+        content.innerHTML = '<div class="error-message">Error loading issues</div>';
+    }
+}
+
+async function viewCorePrompt() {
+    const modal = document.getElementById('corePromptModal');
+    const editor = document.getElementById('corePromptEditor');
+    const status = document.getElementById('editorStatus');
+    
+    modal.style.display = 'flex';
+    editor.value = 'Loading core prompt...';
+    editor.disabled = true;
+    status.textContent = 'Loading...';
+    
+    try {
+        const response = await fetch('/api/core-prompt');
+        const data = await response.json();
+        
+        if (data.success) {
+            editor.value = data.content;
+            editor.disabled = false;
+            status.textContent = 'Ready';
+        } else {
+            editor.value = `Failed to load core prompt: ${data.error}`;
+            status.textContent = 'Error';
+        }
+    } catch (error) {
+        console.error('Error loading core prompt:', error);
+        editor.value = 'Error loading core prompt';
+        status.textContent = 'Error';
+    }
+}
+
+async function saveCorePrompt() {
+    const editor = document.getElementById('corePromptEditor');
+    const status = document.getElementById('editorStatus');
+    const saveBtn = document.getElementById('saveCorePromptBtn');
+    const backupInfo = document.getElementById('lastBackup');
+    
+    if (!confirm('Are you sure you want to save changes to ship.md? A backup will be created.')) {
+        return;
+    }
+    
+    saveBtn.disabled = true;
+    status.textContent = 'Saving...';
+    
+    try {
+        const response = await fetch('/api/core-prompt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: editor.value })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            status.textContent = 'Saved successfully';
+            if (data.backup) {
+                backupInfo.textContent = `Backup: ${data.backup}`;
+            }
+            setTimeout(() => {
+                status.textContent = 'Ready';
+            }, 3000);
+        } else {
+            status.textContent = 'Save failed';
+            alert(`Failed to save: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error saving core prompt:', error);
+        status.textContent = 'Save error';
+        alert('Error saving core prompt');
+    } finally {
+        saveBtn.disabled = false;
+    }
+}
+
+function formatRules(content) {
+    const sections = content.split('\n\n');
+    let html = '<div class="rules-container">';
+    let currentSection = null;
+    
+    sections.forEach(section => {
+        const lines = section.trim().split('\n');
+        if (!lines[0]) return;
+        
+        // Check if it's a section header (ends with Rules or similar)
+        if (lines[0].includes('Rules') || lines[0].includes('Checklist')) {
+            if (currentSection) {
+                html += '</ul></div>';
+            }
+            html += `<div class="rule-section">`;
+            html += `<h3 class="rule-section-title">${lines[0].replace(/-/g, '').trim()}</h3>`;
+            html += '<ul class="rule-list">';
+            currentSection = lines[0];
+        } else {
+            // Process rule items
+            lines.forEach(line => {
+                if (line.startsWith('•')) {
+                    const ruleText = line.substring(1).trim();
+                    let ruleClass = 'rule-item';
+                    
+                    // Color code based on keywords
+                    if (ruleText.toLowerCase().includes('must') || ruleText.toLowerCase().includes('critical')) {
+                        ruleClass += ' rule-critical';
+                    } else if (ruleText.toLowerCase().includes('should') || ruleText.toLowerCase().includes('important')) {
+                        ruleClass += ' rule-important';
+                    } else {
+                        ruleClass += ' rule-info';
+                    }
+                    
+                    html += `<li class="${ruleClass}">${escapeHtml(ruleText)}</li>`;
+                }
+            });
+        }
+    });
+    
+    if (currentSection) {
+        html += '</ul></div>';
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+function formatIssues(content) {
+    const lines = content.split('\n');
+    let html = '<div class="issues-container">';
+    let inBlocker = false;
+    let inIssue = false;
+    let currentIssue = null;
+    
+    lines.forEach(line => {
+        if (line.includes('BLOCKER ISSUES')) {
+            html += '<div class="issue-section">';
+            html += '<div class="issue-blocker-header">';
+            html += '<span class="issue-blocker-badge">BLOCKER</span>';
+            html += '<h3>Critical Issues That Must Be Fixed</h3>';
+            html += '</div>';
+            inBlocker = true;
+        } else if (line.includes('ALL ISSUES')) {
+            if (inBlocker) {
+                html += '</div>';
+            }
+            html += '<div class="issue-section">';
+            html += '<h3 class="rule-section-title">All Migration Issues</h3>';
+            inBlocker = false;
+        } else if (line.match(/^\d+\./)) {
+            // Start of a new issue
+            if (currentIssue) {
+                html += formatSingleIssue(currentIssue, inBlocker);
+            }
+            currentIssue = {
+                title: line,
+                description: '',
+                resolution: '',
+                inResolution: false
+            };
+        } else if (currentIssue) {
+            if (line.includes('Resolution:') || line.includes('Impact:')) {
+                currentIssue.inResolution = true;
+            }
+            
+            if (currentIssue.inResolution) {
+                currentIssue.resolution += line + '\n';
+            } else {
+                currentIssue.description += line + '\n';
+            }
+        }
+    });
+    
+    if (currentIssue) {
+        html += formatSingleIssue(currentIssue, inBlocker);
+    }
+    
+    html += '</div></div>';
+    return html;
+}
+
+function formatSingleIssue(issue, isBlocker) {
+    let html = `<div class="issue-item ${isBlocker ? 'issue-blocker' : ''}">`;
+    html += `<div class="issue-title">${escapeHtml(issue.title)}</div>`;
+    
+    if (issue.description.trim()) {
+        html += `<div class="issue-description">${escapeHtml(issue.description.trim())}</div>`;
+    }
+    
+    if (issue.resolution.trim()) {
+        html += '<div class="issue-resolution">';
+        html += '<div class="issue-resolution-label">Resolution</div>';
+        html += `<div>${escapeHtml(issue.resolution.trim())}</div>`;
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function closeRulesModal() {
+    document.getElementById('rulesModal').style.display = 'none';
+}
+
+function closeIssuesModal() {
+    document.getElementById('issuesModal').style.display = 'none';
+}
+
+function closeCorePromptModal() {
+    document.getElementById('corePromptModal').style.display = 'none';
+}
+
+// Additional Context Functions
+async function viewContext() {
+    const modal = document.getElementById('contextModal');
+    const editor = document.getElementById('contextEditor');
+    const status = document.getElementById('contextStatus');
+    
+    modal.style.display = 'flex';
+    editor.value = 'Loading additional context...';
+    editor.disabled = true;
+    status.textContent = 'Loading...';
+    
+    try {
+        const response = await fetch('/api/context');
+        const data = await response.json();
+        
+        if (data.success) {
+            editor.value = data.content || '';
+            editor.disabled = false;
+            status.textContent = 'Ready';
+            
+            // Show placeholder if empty
+            if (!data.content) {
+                editor.placeholder = `Enter additional context rules here...
+
+Example:
+- Always use specific naming convention: camelCase for Java, snake_case for Python
+- Include detailed logging for all database operations
+- Custom error codes must follow pattern: APP-XXXX
+- Ignore files with .tmp extension during migration`;
+            }
+        } else {
+            editor.value = `Failed to load context: ${data.error}`;
+            status.textContent = 'Error';
+        }
+    } catch (error) {
+        console.error('Error loading context:', error);
+        editor.value = 'Error loading additional context';
+        status.textContent = 'Error';
+    }
+}
+
+async function saveContext() {
+    const editor = document.getElementById('contextEditor');
+    const status = document.getElementById('contextStatus');
+    const saveBtn = document.getElementById('saveContextBtn');
+    
+    saveBtn.disabled = true;
+    status.textContent = 'Saving...';
+    
+    try {
+        const response = await fetch('/api/context', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: editor.value })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            status.textContent = 'Saved successfully';
+            setTimeout(() => {
+                status.textContent = 'Ready';
+            }, 3000);
+        } else {
+            status.textContent = 'Save failed';
+            alert(`Failed to save: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error saving context:', error);
+        status.textContent = 'Save error';
+        alert('Error saving additional context');
+    } finally {
+        saveBtn.disabled = false;
+    }
+}
+
+function closeContextModal() {
+    document.getElementById('contextModal').style.display = 'none';
+}
+
+// Close modals when clicking outside
+window.addEventListener('click', (event) => {
+    if (event.target.classList.contains('modal-overlay')) {
+        event.target.style.display = 'none';
+    }
+});
+
+// Delete item function
+async function deleteItem(itemPath, itemType) {
+    const itemName = itemPath.split('/').pop();
+    const confirmMessage = itemType === 'folder' 
+        ? `Are you sure you want to delete the folder "${itemName}" and all its contents? This action cannot be undone.`
+        : `Are you sure you want to delete the file "${itemName}"? This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: itemPath,
+                type: itemType
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            addLog(`Deleted ${itemType}: ${itemName}`, 'success');
+            
+            // Refresh file tree after deletion
+            setTimeout(() => {
+                refreshFileTree();
+            }, 300);
+        } else {
+            addLog(`Failed to delete ${itemType}: ${data.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        console.error(`Error deleting ${itemType}:`, error);
+        addLog(`Error deleting ${itemType}: ${error.message}`, 'error');
+    }
+}
+
 // Global functions
 window.startProcess = startProcess;
 window.closeTab = closeTab;
 window.openFolderBrowser = openFolderBrowser;
+window.viewRules = viewRules;
+window.viewIssues = viewIssues;
+window.viewCorePrompt = viewCorePrompt;
+window.saveCorePrompt = saveCorePrompt;
+window.closeRulesModal = closeRulesModal;
+window.closeIssuesModal = closeIssuesModal;
+window.closeCorePromptModal = closeCorePromptModal;
+window.viewContext = viewContext;
+window.saveContext = saveContext;
+window.closeContextModal = closeContextModal;
+window.deleteItem = deleteItem;
 window.closeFolderBrowser = closeFolderBrowser;
 window.confirmFolderSelection = confirmFolderSelection;

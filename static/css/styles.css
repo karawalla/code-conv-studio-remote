@@ -1216,6 +1216,41 @@ input[type="text"]:disabled {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* Input Folder Info Bar */
+.input-folder-info {
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 16px;
+    margin: 0;
+}
+
+.input-folder-info .info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-folder-info .info-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.input-folder-info .info-label {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    margin-right: 8px;
+    min-width: 50px;
+}
+
+.input-folder-info .info-value {
+    color: rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Folder View */
 .folder-view-container {
     flex: 1;
@@ -2295,4 +2330,281 @@ input[type="text"]:focus,
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* Rules, Issues, and Core Prompt Styles */
+.modal-large {
+    max-width: 800px;
+    width: 90%;
+}
+
+.modal-xlarge {
+    max-width: 1200px;
+    width: 95%;
+    height: 90vh;
+}
+
+.modal-header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.rules-content,
+.issues-content {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 70vh;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: var(--text-secondary);
+}
+
+/* Rules Display */
+.rule-section {
+    margin-bottom: 32px;
+}
+
+.rule-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.rule-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.rule-item {
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+    transition: all 0.2s ease;
+}
+
+.rule-item:hover {
+    background: var(--bg-hover);
+    transform: translateX(4px);
+}
+
+/* Issues Display */
+.issue-section {
+    margin-bottom: 32px;
+}
+
+.issue-blocker {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.issue-blocker-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.issue-blocker-badge {
+    background: rgb(239, 68, 68);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.issue-item {
+    padding: 16px;
+    margin-bottom: 12px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.issue-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.issue-description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.issue-resolution {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 12px;
+}
+
+.issue-resolution-label {
+    font-weight: 600;
+    color: rgb(34, 197, 94);
+    margin-bottom: 4px;
+}
+
+/* Core Prompt Editor */
+.editor-container {
+    height: calc(100% - 40px);
+    position: relative;
+}
+
+.core-prompt-editor {
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    resize: none;
+    outline: none;
+}
+
+.core-prompt-editor:focus {
+    border-color: var(--primary);
+}
+
+.editor-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.backup-info {
+    font-style: italic;
+}
+
+/* Color coding for different types */
+.rule-critical {
+    border-left-color: #ef4444;
+}
+
+.rule-important {
+    border-left-color: #f59e0b;
+}
+
+.rule-info {
+    border-left-color: #3b82f6;
+}
+
+.issue-major {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.issue-minor {
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* Additional Context Styles */
+.context-instructions {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.context-instructions p {
+    margin: 0 0 12px 0;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.context-instructions ul {
+    margin: 0;
+    padding-left: 24px;
+}
+
+.context-instructions li {
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.context-instructions code {
+    background: var(--bg-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--primary);
+}
+
+/* Delete button styles */
+.folder-item .delete-btn,
+.file-item .delete-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--muted-foreground);
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.folder-item:hover .delete-btn,
+.file-item:hover .delete-btn {
+    opacity: 1;
+}
+
+.delete-btn:hover {
+    background: var(--destructive);
+    color: var(--destructive-foreground);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.delete-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.delete-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Adjust name width when delete button is present */
+.folder-item:has(.delete-btn) .name,
+.file-item:has(.delete-btn) .name {
+    padding-right: 40px;
 }

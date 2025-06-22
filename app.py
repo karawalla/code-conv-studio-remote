@@ -720,6 +720,50 @@ def cleanup_output():
         logger.error(f"Error during cleanup: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/delete', methods=['POST'])
+def delete_item():
+    """Delete a specific file or folder from the output directory"""
+    try:
+        data = request.get_json()
+        item_path = data.get('path')
+        item_type = data.get('type', 'file')
+        
+        if not item_path:
+            return jsonify({'success': False, 'error': 'Path is required'}), 400
+        
+        # Ensure the path is within the output folder
+        full_path = os.path.join(Config.OUTPUT_FOLDER, item_path)
+        full_path = os.path.abspath(full_path)
+        output_folder_abs = os.path.abspath(Config.OUTPUT_FOLDER)
+        
+        if not full_path.startswith(output_folder_abs):
+            return jsonify({'success': False, 'error': 'Invalid path'}), 400
+        
+        if not os.path.exists(full_path):
+            return jsonify({'success': False, 'error': 'Path not found'}), 404
+        
+        # Delete the item
+        if item_type == 'folder' and os.path.isdir(full_path):
+            import shutil
+            shutil.rmtree(full_path)
+            logger.info(f"Deleted folder: {item_path}")
+        elif os.path.isfile(full_path):
+            os.remove(full_path)
+            logger.info(f"Deleted file: {item_path}")
+        else:
+            return jsonify({'success': False, 'error': 'Invalid item type'}), 400
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully deleted {item_type}: {item_path}',
+            'path': item_path,
+            'type': item_type
+        })
+        
+    except Exception as e:
+        logger.error(f"Error deleting item: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/input')
 def get_input_info():
     """Get information about the input folder"""
@@ -818,6 +862,127 @@ def stream():
                 yield f"data: {json.dumps({'type': 'keepalive'})}\n\n"
 
     return Response(generate(), mimetype='text/event-stream')
+
+@app.route('/api/rules')
+def get_rules():
+    """Get migration rules"""
+    try:
+        rules_path = os.path.join(os.getcwd(), 'data', 'rules')
+        if os.path.exists(rules_path):
+            with open(rules_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return jsonify({'content': content, 'success': True})
+        else:
+            return jsonify({'error': 'Rules file not found', 'success': False}), 404
+    except Exception as e:
+        logger.error(f"Error reading rules: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/issues')
+def get_issues():
+    """Get migration issues"""
+    try:
+        issues_path = os.path.join(os.getcwd(), 'data', 'issues')
+        if os.path.exists(issues_path):
+            with open(issues_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return jsonify({'content': content, 'success': True})
+        else:
+            return jsonify({'error': 'Issues file not found', 'success': False}), 404
+    except Exception as e:
+        logger.error(f"Error reading issues: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/core-prompt')
+def get_core_prompt():
+    """Get core prompt (ship.md) content"""
+    try:
+        prompt_path = os.path.join(os.getcwd(), 'prompts', 'ship.md')
+        if os.path.exists(prompt_path):
+            with open(prompt_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return jsonify({'content': content, 'success': True})
+        else:
+            return jsonify({'error': 'Core prompt file not found', 'success': False}), 404
+    except Exception as e:
+        logger.error(f"Error reading core prompt: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/core-prompt', methods=['POST'])
+def save_core_prompt():
+    """Save core prompt (ship.md) with backup"""
+    try:
+        data = request.json
+        content = data.get('content', '')
+        
+        if not content:
+            return jsonify({'error': 'No content provided', 'success': False}), 400
+        
+        prompt_path = os.path.join(os.getcwd(), 'prompts', 'ship.md')
+        
+        # Create backup with timestamp
+        if os.path.exists(prompt_path):
+            timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M')
+            backup_path = f"{prompt_path}.bak.{timestamp}"
+            shutil.copy2(prompt_path, backup_path)
+            logger.info(f"Created backup: {backup_path}")
+        
+        # Save new content
+        with open(prompt_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Core prompt saved successfully',
+            'backup': f"ship.md.bak.{timestamp}" if 'timestamp' in locals() else None
+        })
+        
+    except Exception as e:
+        logger.error(f"Error saving core prompt: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/context')
+def get_context():
+    """Get additional context (context.md) content"""
+    try:
+        context_path = os.path.join(os.getcwd(), 'prompts', 'context.md')
+        if os.path.exists(context_path):
+            with open(context_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return jsonify({'content': content, 'success': True})
+        else:
+            # Return empty content if file doesn't exist
+            return jsonify({'content': '', 'success': True})
+    except Exception as e:
+        logger.error(f"Error reading context: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/context', methods=['POST'])
+def save_context():
+    """Save additional context (context.md)"""
+    try:
+        data = request.json
+        content = data.get('content', '')
+        
+        prompts_dir = os.path.join(os.getcwd(), 'prompts')
+        if not os.path.exists(prompts_dir):
+            os.makedirs(prompts_dir)
+            
+        context_path = os.path.join(prompts_dir, 'context.md')
+        
+        # Save content (can be empty to clear context)
+        with open(context_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Additional context saved successfully',
+            'path': 'prompts/context.md'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error saving context: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
 
 # Application Entry Point
 if __name__ == '__main__':

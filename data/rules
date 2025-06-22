@@ -1,0 +1,141 @@
+End Validation Rules for SpringBoot to MuleSoft Migration
+=========================================================
+
+Core Rules
+----------
+
+• Every doc:id attribute MUST be a valid UUID v4 format (XXXXXXXX-XXXX-4XXX-YXXX-XXXXXXXXXXXX)
+• The 13th character in UUID must be "4" and 17th character must be one of: 8, 9, a, or b
+• Never use sequential patterns or text identifiers for doc:id values
+• Each component must have a unique randomly generated UUID
+• All properties from application.properties/yml must be placed under "globalVariables" with exact structure: source, type, value
+• The type field in globalVariables must always be "string" (never "sring" or other variations)
+• Reference global variables using ${propertyName} syntax in components
+• First component in flow must have parentId: [0] and start: "true"
+• All other components must have parentId: [previousComponentSequenceId] and start: "false"
+• Sequence IDs must start from 1 and be unique within each flow
+• No choice components allowed - use links with xpath/otherwise conditions instead
+• The "code" field is mandatory and must contain complete Mule XML with escaped quotes
+• All boolean fields in component summary must be true
+• Component names must use camelCase (e.g., getUserByIdListener)
+• Flow names must use camelCase ending with "Flow" (e.g., getUserByIdFlow)
+
+Ship Format Structure Rules
+--------------------------
+
+• Main JSON structure must contain: flows, globalElements, globalConfig, globalVariables, projectInformation
+• Each flow must have: name, components, groupActivities (usually empty), links
+• Each component must contain ALL fields in exact order: activityType, activityConfig, config, code, inputBindings, outputBindings, name, parentId, sequenceId, start, type, activityDescription, summary, category, function
+• inputBindings and outputBindings must always be empty string ""
+• type field must always be "activity" for regular components
+• Links must have: conditionType (always/xpath/otherwise), description, from, to
+• Only include xpath field in links when conditionType is "xpath"
+• globalElements must mirror entries in globalConfig array
+• globalConfig array must contain only config field for each configuration
+
+Component Type Rules
+-------------------
+
+• Allowed component types only: HTTP Listener, Scheduler, Transform Message, Database Select/Insert/Update/Delete, Raise Error, Set Payload, Set Variable, JMS Publish, File Read, File Write, HTTP Request, Logger, Flow Reference
+• Do not use: Try, Choice, File List/Copy/Rename/Move, or any advanced components
+• For @Scheduled methods, flow MUST begin with Scheduler component
+• For JmsTemplate operations, MUST include JMS Publish components
+• For File operations, ONLY use file:read and file:write
+• For external HTTP calls, MUST generate HTTP Request components
+
+XML Code Rules
+--------------
+
+• Raise Error MUST use "description" attribute, NOT "message"
+• Raise Error MUST include BOTH type AND description attributes
+• Error types must follow namespace:identifier format (e.g., VALIDATION:NULL, DB:CONNECTIVITY)
+• Transform Message output must be application/json, never application/java
+• Reserved words in JSON must be quoted ("type", "class", "function", etc.)
+• Do not include doc:name attributes inside connection elements
+• Do not include driverClassName attribute in MySQL connections
+• JMS brokerUrl must be inside jms:factory-configuration tag
+• HTTP Listener should not include response configurations
+• File operations must include proper file:content tags for write operations
+
+DataWeave Rules
+---------------
+
+• Only use inline DataWeave expressions, no external imports
+• Always quote reserved words when used as JSON object keys
+• Reserved words include: type, class, function, import, var, if, else, match, case, default, namespace, module, output, input
+• Use simple transformations only, no complex functions
+• For file variables, use vars.file instead of vars.file.getName()
+
+Configuration Rules
+-------------------
+
+• HTTP Listener Config must reference ${http.host} and ${http.port}
+• Database Config must reference ${db.host}, ${db.port}, ${db.user}, ${db.password}
+• JMS Config must have proper structure with jms:active-mq-connection and jms:factory-configuration
+• File Config must include workingDir property
+• HTTP Request Config must be generated for external service calls
+• All configurations must be in both globalElements and globalConfig arrays
+
+Error Handling Rules
+--------------------
+
+• Use Raise Error for exceptions that stop flow execution
+• Use JMS Publish for status notifications and audit trails
+• Error handling scopes must include: enableNotifications="true", logException="true"
+• Do not use HTTPResponse tags - use Set Variable for status codes
+• Always provide both xpath and otherwise branches for conditional logic
+
+Project Information Rules
+-------------------------
+
+• Summary section must include all required fields with proper counts
+• totalComponents, totalActivitiesCount, totalFlowCount must equal total activity count
+• fullyMigrated must equal total activity count
+• partiallyMigrated and notMigrated must be 0
+• fullMigratedActivities must contain unique activity mappings with counts
+• Each activity mapping must have: mule_activity, SB_activity, count
+
+File Operation Specific Rules
+-----------------------------
+
+• Replace File object patterns with file:read components
+• Implement file copying as: file:read source → file:write destination
+• Implement file archiving as: file:read → file:write to archive
+• Use File List with sizeOf(payload) > 0 to check file existence
+• Never use advanced file operations beyond basic read/write
+
+Scheduler Specific Rules
+------------------------
+
+• Scheduler must contain inline scheduling-strategy tag
+• scheduling-strategy must contain inline fixed-frequency tag
+• fixed-frequency must have both frequency and timeUnit attributes
+• Common timeUnit values: MILLISECONDS, SECONDS, MINUTES, HOURS, DAYS
+
+JMS Specific Rules
+------------------
+
+• JMS config must have name, doc:name, and doc:id attributes
+• Must contain jms:active-mq-connection with username, password, specification
+• jms:active-mq-connection must contain jms:factory-configuration with brokerUrl
+• JMS Publish must include jms:message with jms:body containing payload
+
+HTTP Request Specific Rules
+---------------------------
+
+• HTTP request must include method, doc:name="Request", doc:id, config-ref, path
+• Include http:body with CDATA payload for POST/PUT/PATCH methods
+• Omit http:body for GET requests
+• HTTP request config must contain http:request-connection with host and port
+
+Final Validation Checklist
+--------------------------
+
+• All doc:id values are valid random UUIDs
+• All required components for Spring Boot patterns are included
+• All global configurations are properly structured
+• All global variables follow the exact format
+• All DataWeave expressions quote reserved words
+• All error handling follows proper patterns
+• All file operations use only basic read/write
+• Project information summary is complete and accurate
