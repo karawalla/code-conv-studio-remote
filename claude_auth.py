@@ -121,8 +121,10 @@ fi
         """Get command line arguments for Claude Code with authentication"""
         args = []
         
-        # Use the auth helper script
-        args.extend(['--api-key-helper', str(self.auth_helper_path)])
+        # Only use auth helper if we're not using OAuth
+        if self.api_key != "claude-oauth":
+            # Use the auth helper script
+            args.extend(['--api-key-helper', str(self.auth_helper_path)])
         
         return args
     
@@ -174,7 +176,7 @@ class ClaudeSessionManager:
         self.session_start_time = None
         self.max_session_duration = timedelta(hours=2)  # Reconnect every 2 hours
         
-    def start_claude_process(self, query: str, allowed_tools: str = "Read,Write,Bash") -> subprocess.Popen:
+    def start_claude_process(self, query: str, allowed_tools: str = "Read,Write,Edit,MultiEdit,Bash,Glob,Grep,LS") -> subprocess.Popen:
         """Start a Claude process with proper authentication"""
         # Check if we need to refresh session
         if self.session_start_time and \
@@ -201,6 +203,7 @@ class ClaudeSessionManager:
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
+            cwd='/home/ubuntu/code-conv-studio',  # Set working directory
             env=os.environ.copy()  # Pass environment with API key
         )
         
@@ -255,12 +258,16 @@ class EnhancedProcessManager:
                 process = self.session_manager.start_claude_process(query)
                 
                 # Process output
+                logger.info("Starting to read process output")
                 for line in process.stdout:
                     if not line.strip():
                         continue
                     
+                    logger.debug(f"Raw output line: {line.strip()}")
+                    
                     try:
                         message = json.loads(line.strip())
+                        logger.debug(f"Parsed message: {message}")
                         
                         # Check for auth errors in messages
                         if message.get('type') == 'error':
@@ -271,12 +278,24 @@ class EnhancedProcessManager:
                                 logger.info(f"Retrying with refreshed authentication (attempt {retry_count})")
                                 break
                         
-                        message_queue.put(message)
+                        # Process message through handlers like the original ProcessManager
+                        self._handle_message(message, message_queue)
                         
-                    except json.JSONDecodeError:
-                        pass
+                    except json.JSONDecodeError as e:
+                        logger.debug(f"Failed to parse JSON: {e}, line: {line.strip()}")
+                        # Put raw output as a message
+                        message_queue.put({
+                            'type': 'raw',
+                            'content': line.strip()
+                        })
+                
+                # Read any stderr
+                stderr_output = process.stderr.read()
+                if stderr_output:
+                    logger.error(f"Process stderr: {stderr_output}")
                 
                 process.wait()
+                logger.info(f"Process completed with return code: {process.returncode}")
                 
                 # Check return code for auth issues
                 if process.returncode in [401, 403]:
@@ -297,6 +316,88 @@ class EnhancedProcessManager:
         
         # Signal completion
         message_queue.put(None)
+    
+    def _handle_message(self, message: Dict[str, Any], message_queue):
+        """Handle different types of messages from Claude"""
+        message_type = message.get("type")
+
+        if message_type == "assistant":
+            self._handle_assistant_message(message, message_queue)
+        elif message_type == "system" and message.get("subtype") == "init":
+            self._handle_init_message(message, message_queue)
+        elif message_type == "result":
+            self._handle_result_message(message, message_queue)
+
+    def _handle_assistant_message(self, message: Dict[str, Any], message_queue):
+        """Handle assistant messages"""
+        for content in message.get("message", {}).get("content", []):
+            if content.get("type") == "text":
+                text = content.get("text", "").strip()
+                if text:
+                    # Filter and clean text
+                    filtered_text = self._clean_text(text)
+                    if filtered_text.strip():
+                        message_queue.put({
+                            'type': 'message',
+                            'content': filtered_text
+                        })
+
+            elif content.get("type") == "tool_use":
+                self._handle_tool_use(content, message_queue)
+
+    def _handle_tool_use(self, content: Dict[str, Any], message_queue):
+        """Handle tool use messages"""
+        # Show tool use messages for better visibility
+        tool_name = content.get('name', 'unknown')
+        message_queue.put({
+            'type': 'tool',
+            'content': f"🔧 Using tool: {tool_name}"
+        })
+
+    def _handle_init_message(self, message: Dict[str, Any], message_queue):
+        """Handle initialization messages"""
+        session_id = message.get('session_id', '')
+        message_queue.put({
+            'type': 'init',
+            'content': f"🚀 Starting session: {session_id[-8:] if session_id else 'unknown'}"
+        })
+
+    def _handle_result_message(self, message: Dict[str, Any], message_queue):
+        """Handle result messages"""
+        subtype = message.get("subtype")
+        if subtype == "success":
+            duration = message.get('duration_ms', 0) / 1000
+            cost = message.get('total_cost_usd', 0)
+            turns = message.get('num_turns', 0)
+
+            message_queue.put({
+                'type': 'success',
+                'content': f"✅ Completed in {duration:.2f}s | 💰 Cost: ${cost:.4f} | 🔄 Turns: {turns}"
+            })
+        else:
+            # Provide user-friendly error messages based on error type
+            error_messages = {
+                'error_during_execution': '⚠️ Process completed but encountered an issue during finalization. Generated files should still be valid.',
+                'timeout': '⏱️ Process timed out. Consider breaking down your request into smaller tasks.',
+                'resource_limit': '💾 Process exceeded resource limits. Try with a smaller input or simpler query.',
+                'permission_denied': '🔒 Permission denied. Check file permissions and access rights.',
+                'network_error': '🌐 Network connectivity issue. Please check your connection and try again.',
+                'invalid_input': '📝 Invalid input provided. Please check your query and input files.',
+                'tool_error': '🔧 Tool execution failed. Check input files and permissions.',
+            }
+            
+            user_friendly_message = error_messages.get(subtype, f"❌ Process error: {subtype}")
+            
+            message_queue.put({
+                'type': 'error',
+                'content': user_friendly_message
+            })
+
+    def _clean_text(self, text: str) -> str:
+        """Clean and filter text output"""
+        # Replace Claude mentions with Cognidev
+        filtered_text = text.replace("Claude", "Cognidev").replace("claude", "Cognidev")
+        return filtered_text
 
 
 # Example usage in Flask app
@@ -322,6 +423,13 @@ def create_claude_auth_manager(api_key: Optional[str] = None) -> ClaudeAuthManag
                 api_key = response['SecretString']
             except:
                 pass
+    
+    # If still no key, check if we're using OAuth (Claude CLI authentication)
+    if not api_key:
+        credentials_file = Path.home() / '.claude' / '.credentials.json'
+        if credentials_file.exists():
+            # We have OAuth credentials, use a placeholder
+            api_key = "claude-oauth"
     
     if not api_key:
         raise ValueError("No Claude API key found. Please set CLAUDE_API_KEY environment variable.")
