@@ -17,7 +17,7 @@ const TASK_MAPPING = {
         name: 'Analyze',
         description: 'Generate Developer Notes',
         file: 'task1.md',
-        query: 'Use Task 1.md from the prompts folder and perform the task',
+        query: 'Use task1.md from the prompts folder and perform the task',
         icon: '📝',
         color: '#3b82f6'
     },
@@ -25,7 +25,7 @@ const TASK_MAPPING = {
         name: 'Plan', 
         description: 'Generate Migration Plan',
         file: 'task2.md',
-        query: 'Use Task 2.md from the prompts folder and perform the task',
+        query: 'Use task2.md from the prompts folder and perform the task',
         icon: '📋',
         color: '#059669'
     },
@@ -33,9 +33,17 @@ const TASK_MAPPING = {
         name: 'Migrate',
         description: 'Generate Ship JSON',
         file: 'task3.md', 
-        query: 'Use Task 3.md from the prompts folder and perform the task',
+        query: 'Use task3.md from the prompts folder and perform the task',
         icon: '🚀',
         color: '#dc2626'
+    },
+    'task4': {
+        name: 'Fix',
+        description: 'Apply Fix Issues',
+        file: 'task4.md',
+        query: 'Use task4.md from the prompts folder and perform the task',
+        icon: '🔧',
+        color: '#d97706'
     }
 };
 
@@ -1305,6 +1313,42 @@ class ManagementActions {
 }
 
 // Task Management Functions
+function executeTask4() {
+    const task = TASK_MAPPING['task4'];
+    if (!task) return;
+
+    // Clear any existing task selection
+    document.querySelectorAll('.task-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    // Select the task4 button
+    const task4Button = document.querySelector('[data-task="task4"]');
+    if (task4Button) {
+        task4Button.classList.add('selected');
+    }
+
+    // Set the query value
+    const queryInput = document.getElementById('query');
+    queryInput.value = task.query;
+    queryInput.classList.remove('custom-mode');
+    queryInput.readOnly = true;
+    queryInput.placeholder = `${task.name}: ${task.description}`;
+    
+    // Update global status
+    updateGlobalStatus(`Starting ${task.name} task...`, 'active');
+    
+    // Clear custom query mode
+    app.isCustomQueryMode = false;
+    
+    // Auto-execute the task
+    setTimeout(() => {
+        startProcess();
+        // Scroll to processing logs section
+        scrollToProcessingLogs();
+    }, 500); // Small delay for visual feedback
+}
+
 function selectTask(taskId) {
     const task = TASK_MAPPING[taskId];
     if (!task) return;
@@ -2220,3 +2264,171 @@ async function checkAuthStatus() {
 }
 
 window.checkAuthStatus = checkAuthStatus;
+
+// Fix Modal Functions
+let fixIssues = [];
+let issueCounter = 0;
+
+function openFixModal() {
+    const modal = document.getElementById('fixModal');
+    modal.style.display = 'flex';
+    
+    // Reset issues if needed
+    if (fixIssues.length === 0) {
+        fixIssues = [];
+        issueCounter = 0;
+        renderIssuesList();
+    }
+}
+
+function closeFixModal() {
+    const modal = document.getElementById('fixModal');
+    modal.style.display = 'none';
+}
+
+function addNewIssue() {
+    issueCounter++;
+    const issue = {
+        id: `issue-${issueCounter}`,
+        number: issueCounter,
+        text: ''
+    };
+    
+    fixIssues.push(issue);
+    renderIssuesList();
+    
+    // Focus on the new issue textarea
+    setTimeout(() => {
+        const textarea = document.querySelector(`#${issue.id} textarea`);
+        if (textarea) {
+            textarea.focus();
+        }
+    }, 100);
+}
+
+function removeIssue(issueId) {
+    fixIssues = fixIssues.filter(issue => issue.id !== issueId);
+    renderIssuesList();
+}
+
+function updateIssueText(issueId, text) {
+    const issue = fixIssues.find(issue => issue.id === issueId);
+    if (issue) {
+        issue.text = text;
+    }
+}
+
+function renderIssuesList() {
+    const container = document.getElementById('issuesList');
+    container.innerHTML = '';
+    
+    fixIssues.forEach(issue => {
+        const issueElement = document.createElement('div');
+        issueElement.className = 'issue-item';
+        issueElement.id = issue.id;
+        
+        issueElement.innerHTML = `
+            <div class="issue-header">
+                <span class="issue-number">Issue #${issue.number}</span>
+                <button class="remove-issue-btn" onclick="removeIssue('${issue.id}')" title="Remove issue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+            <textarea 
+                class="issue-textarea" 
+                placeholder="Describe the issue that needs to be fixed..."
+                onchange="updateIssueText('${issue.id}', this.value)"
+                onkeyup="updateIssueText('${issue.id}', this.value)"
+            >${issue.text}</textarea>
+        `;
+        
+        container.appendChild(issueElement);
+    });
+}
+
+async function saveFixIssues() {
+    // Filter out empty issues
+    const validIssues = fixIssues.filter(issue => issue.text.trim() !== '');
+    
+    if (validIssues.length === 0) {
+        alert('Please add at least one issue before saving.');
+        return;
+    }
+    
+    // Show loading state
+    const saveBtn = document.querySelector('#fixModal .modal-header-actions .btn-primary');
+    const originalContent = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `
+        <div class="spinner"></div>
+        Saving...
+    `;
+    
+    try {
+        const response = await fetch('/api/fix', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                issues: validIssues.map(issue => issue.text)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            addLogEntry(`Fix issues saved to ${data.file_path}`, 'success');
+            updateGlobalStatus('Fix issues saved, starting task 4...', 'success');
+            closeFixModal();
+            
+            // Reset issues for next time
+            fixIssues = [];
+            issueCounter = 0;
+            renderIssuesList();
+            
+            // Set up task4 directly as custom query mode
+            const task = TASK_MAPPING['task4'];
+            const queryInput = document.getElementById('query');
+            queryInput.value = task.query;
+            queryInput.classList.add('custom-mode');
+            queryInput.readOnly = false;
+            queryInput.placeholder = `${task.name}: ${task.description}`;
+            app.isCustomQueryMode = true;
+            updateGlobalStatus(`Starting ${task.name} task...`, 'active');
+            
+            setTimeout(() => {
+                startProcess();
+            }, 500);
+        } else {
+            alert(`Failed to save issues: ${data.error || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('Error saving fix issues:', error);
+        alert('Error saving fix issues: ' + error.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalContent;
+    }
+}
+
+// Add keyboard shortcut for Fix button
+document.addEventListener('keydown', function(e) {
+    // Only handle shortcuts if not in input fields and not in custom query mode
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !app.isCustomQueryMode) {
+        if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            openFixModal();
+        }
+    }
+});
+
+// Export functions to window
+window.openFixModal = openFixModal;
+window.closeFixModal = closeFixModal;
+window.addNewIssue = addNewIssue;
+window.removeIssue = removeIssue;
+window.updateIssueText = updateIssueText;
+window.saveFixIssues = saveFixIssues;
