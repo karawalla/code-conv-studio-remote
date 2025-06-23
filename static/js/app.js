@@ -1479,8 +1479,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Global keyboard shortcuts for task selection
     document.addEventListener('keydown', function(e) {
-        // Only handle shortcuts if not in input fields and not in custom query mode
-        if (e.target.tagName !== 'INPUT' && !app.isCustomQueryMode) {
+        // Only handle shortcuts if not in input fields, textareas and not in custom query mode
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !app.isCustomQueryMode) {
             switch(e.key) {
                 case '1':
                     e.preventDefault();
@@ -2121,13 +2121,18 @@ async function saveContext() {
             body: JSON.stringify({ content: editor.value })
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
             status.textContent = 'Saved successfully';
+            addLogEntry('Additional context saved successfully', 'success');
             setTimeout(() => {
-                status.textContent = 'Ready';
-            }, 3000);
+                closeContextModal();
+            }, 1000);
         } else {
             status.textContent = 'Save failed';
             alert(`Failed to save: ${data.error}`);
@@ -2135,7 +2140,7 @@ async function saveContext() {
     } catch (error) {
         console.error('Error saving context:', error);
         status.textContent = 'Save error';
-        alert('Error saving additional context');
+        alert(`Error saving additional context: ${error.message}`);
     } finally {
         saveBtn.disabled = false;
     }

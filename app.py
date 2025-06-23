@@ -29,8 +29,8 @@ class Config:
     LOG_LEVEL = logging.DEBUG
     LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
     HOST = '0.0.0.0'
-    PORT = 8080
-    DEBUG = True
+    PORT = 80
+    DEBUG = False
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -517,6 +517,20 @@ class ProcessManager:
                 'content': f"Processing error: {str(e)}"
             })
         finally:
+            # Ensure process is properly cleaned up
+            try:
+                # Give process a chance to exit gracefully
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                logger.warning("Claude process didn't exit within timeout, terminating")
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    logger.error("Claude process didn't terminate, killing forcefully")
+                    process.kill()
+                    process.wait()
+            
             # Signal completion
             app_state.message_queue.put(None)
 
@@ -937,13 +951,15 @@ def get_issues():
 def get_core_prompt():
     """Get core prompt (ship.md) content"""
     try:
-        prompt_path = os.path.join(os.getcwd(), 'prompts', 'ship.md')
+        # Use the same directory as the Flask app
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_path = os.path.join(app_dir, 'prompts', 'ship.md')
         if os.path.exists(prompt_path):
             with open(prompt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             return jsonify({'content': content, 'success': True})
         else:
-            return jsonify({'error': 'Core prompt file not found', 'success': False}), 404
+            return jsonify({'error': f'Core prompt file not found at: {prompt_path}', 'success': False}), 404
     except Exception as e:
         logger.error(f"Error reading core prompt: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
@@ -958,11 +974,20 @@ def save_core_prompt():
         if not content:
             return jsonify({'error': 'No content provided', 'success': False}), 400
         
-        prompt_path = os.path.join(os.getcwd(), 'prompts', 'ship.md')
+        # Use the same directory as the Flask app
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_path = os.path.join(app_dir, 'prompts', 'ship.md')
+        prompts_dir = os.path.dirname(prompt_path)
+        
+        # Ensure prompts directory exists
+        if not os.path.exists(prompts_dir):
+            os.makedirs(prompts_dir, exist_ok=True)
+            logger.info(f"Created prompts directory: {prompts_dir}")
         
         # Create backup with timestamp
+        timestamp = None
         if os.path.exists(prompt_path):
-            timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M')
+            timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
             backup_path = f"{prompt_path}.bak.{timestamp}"
             shutil.copy2(prompt_path, backup_path)
             logger.info(f"Created backup: {backup_path}")
@@ -971,14 +996,17 @@ def save_core_prompt():
         with open(prompt_path, 'w', encoding='utf-8') as f:
             f.write(content)
         
+        logger.info(f"Successfully saved core prompt to: {prompt_path}")
+        
         return jsonify({
             'success': True,
             'message': 'Core prompt saved successfully',
-            'backup': f"ship.md.bak.{timestamp}" if 'timestamp' in locals() else None
+            'backup': f"ship.md.bak.{timestamp}" if timestamp else None
         })
         
     except Exception as e:
         logger.error(f"Error saving core prompt: {e}")
+        logger.error(f"Stack trace: ", exc_info=True)
         return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/api/context')
@@ -1022,6 +1050,55 @@ def save_context():
         
     except Exception as e:
         logger.error(f"Error saving context: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/fix', methods=['POST'])
+def save_fix():
+    """Save fix issues to fix.md"""
+    try:
+        data = request.json
+        issues = data.get('issues', [])
+        
+        if not issues:
+            return jsonify({'error': 'No issues provided', 'success': False}), 400
+        
+        prompts_dir = os.path.join(os.getcwd(), 'prompts')
+        if not os.path.exists(prompts_dir):
+            os.makedirs(prompts_dir)
+            
+        fix_path = os.path.join(prompts_dir, 'fix.md')
+        
+        # Delete existing fix.md if it exists
+        if os.path.exists(fix_path):
+            os.remove(fix_path)
+            logger.info(f"Removed existing fix.md")
+        
+        # Create new fix.md with the issues
+        content = "# Fix Issues\n\n"
+        content += "The following issues need to be addressed during migration:\n\n"
+        
+        for i, issue in enumerate(issues, 1):
+            content += f"## Issue {i}\n\n"
+            content += f"{issue}\n\n"
+        
+        content += "---\n\n"
+        content += f"*Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n"
+        
+        # Save the new fix.md
+        with open(fix_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        logger.info(f"Saved {len(issues)} fix issues to {fix_path}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Saved {len(issues)} issues to fix.md',
+            'file_path': 'prompts/fix.md',
+            'issues_count': len(issues)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error saving fix issues: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/api/auth/status')
