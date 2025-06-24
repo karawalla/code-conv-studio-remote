@@ -56,7 +56,10 @@
       "Bash(kill:*)",
       "Bash(sudo systemctl restart:*)",
       "Bash(sudo journalctl:*)",
-      "Bash(./start.sh:*)"
+      "Bash(./start.sh:*)",
+      "Bash(sudo systemctl status:*)",
+      "Bash(sed:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

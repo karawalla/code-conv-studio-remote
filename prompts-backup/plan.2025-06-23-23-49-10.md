@@ -1,4 +1,4 @@
-# Spring Boot to Ship Format Migration Guide -V2
+# Spring Boot to Ship Format Migration Guide
 
 ## Overview
 

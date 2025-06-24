@@ -17,7 +17,9 @@
       "Bash(sudo kill:*)",
       "Bash(sudo pkill:*)",
       "Bash(sudo cat:*)",
-      "Bash(sudo sed:*)"
+      "Bash(sudo sed:*)",
+      "Bash(../stop.sh)",
+      "Bash(../start.sh)"
     ],
     "deny": []
   }
