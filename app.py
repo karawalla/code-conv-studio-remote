@@ -4,7 +4,8 @@ A modern web application for code conversion with real-time file monitoring
 and professional UI components.
 """
 
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, send_file
+from werkzeug.utils import secure_filename
 import subprocess
 import json
 import threading
@@ -16,6 +17,8 @@ import time
 import shutil
 from pathlib import Path
 import mimetypes
+import zipfile
+import tempfile
 from typing import List, Dict, Any, Optional
 
 from flask_cors import CORS
@@ -26,15 +29,19 @@ class Config:
     """Application configuration"""
     OUTPUT_FOLDER = os.path.join(os.getcwd(), 'output')
     INPUT_FOLDER = os.path.join(os.getcwd(), 'input')
+    DATA_FOLDER = os.path.join(os.getcwd(), 'data')
     LOG_LEVEL = logging.DEBUG
     LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
     HOST = '0.0.0.0'
     PORT = 80
     DEBUG = False
+    MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100MB
+    ALLOWED_EXTENSIONS = {'.java', '.xml', '.properties', '.yml', '.yaml', '.json', '.txt', '.md', '.gradle', '.pom'}
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
+app.config['MAX_CONTENT_LENGTH'] = Config.MAX_UPLOAD_SIZE
 
 # Set up logging
 logging.basicConfig(
@@ -275,13 +282,19 @@ class FileManager:
 
     @staticmethod
     def browse_directory(directory_path: str = None) -> Dict[str, Any]:
-        """Browse directories for folder selection"""
+        """Browse directories for folder selection - restricted to data folder"""
         try:
+            # Default to data folder
             if directory_path is None:
-                directory_path = os.getcwd()
+                directory_path = Config.DATA_FOLDER
 
-            # Security check - prevent browsing outside reasonable bounds
+            # Security check - ensure we're within the data folder
             directory_path = os.path.abspath(directory_path)
+            data_folder_abs = os.path.abspath(Config.DATA_FOLDER)
+            
+            # Restrict browsing to data folder only
+            if not directory_path.startswith(data_folder_abs):
+                directory_path = data_folder_abs
 
             if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
                 return {
@@ -292,19 +305,24 @@ class FileManager:
 
             items = []
             try:
-                # Add parent directory option (except for root)
+                # Add parent directory option (except when at data folder root)
                 parent_dir = os.path.dirname(directory_path)
-                if parent_dir != directory_path:  # Not at root
-                    items.append({
-                        'name': '..',
-                        'type': 'parent',
-                        'path': parent_dir,
-                        'display_name': '← Parent Directory'
-                    })
+                if parent_dir != directory_path and directory_path != data_folder_abs:
+                    # Only show parent if it's still within data folder
+                    if parent_dir.startswith(data_folder_abs):
+                        items.append({
+                            'name': '..',
+                            'type': 'parent',
+                            'path': parent_dir,
+                            'display_name': '← Parent Directory'
+                        })
 
                 # List directories only
+                # Skip system files when browsing data folder root
+                skip_items = {'rules', 'issues'} if directory_path == data_folder_abs else set()
+                
                 for item in sorted(os.listdir(directory_path)):
-                    if item.startswith('.'):
+                    if item.startswith('.') or item in skip_items:
                         continue
 
                     item_path = os.path.join(directory_path, item)
@@ -493,6 +511,7 @@ class ProcessManager:
     @staticmethod
     def process_claude_output(process, query: str):
         """Process output from the subprocess and send to queue"""
+        stderr_output = []
         try:
             for line in process.stdout:
                 if not line.strip():
@@ -517,6 +536,23 @@ class ProcessManager:
                 'content': f"Processing error: {str(e)}"
             })
         finally:
+            # Capture any stderr output
+            try:
+                # Read stderr in non-blocking mode
+                import select
+                while True:
+                    ready = select.select([process.stderr], [], [], 0.1)[0]
+                    if ready:
+                        line = process.stderr.readline()
+                        if line:
+                            stderr_output.append(line.strip())
+                        else:
+                            break
+                    else:
+                        break
+            except:
+                pass
+            
             # Ensure process is properly cleaned up
             try:
                 # Give process a chance to exit gracefully
@@ -530,6 +566,19 @@ class ProcessManager:
                     logger.error("Claude process didn't terminate, killing forcefully")
                     process.kill()
                     process.wait()
+            
+            # Log any stderr output if present
+            if stderr_output:
+                logger.warning(f"Claude process stderr output: {' '.join(stderr_output)}")
+            
+            # Reset context.md file after migration completion
+            context_file_path = os.path.join(os.path.dirname(__file__), 'prompts', 'context.md')
+            try:
+                with open(context_file_path, 'w') as f:
+                    f.write('')  # Clear the file
+                logger.info(f"Successfully reset context.md file at {context_file_path}")
+            except Exception as e:
+                logger.error(f"Failed to reset context.md file: {str(e)}")
             
             # Signal completion
             app_state.message_queue.put(None)
@@ -597,9 +646,16 @@ class ProcessManager:
                 'content': f"✅ Completed in {duration:.2f}s | 💰 Cost: ${cost:.4f} | 🔄 Turns: {turns}"
             })
         else:
+            # Log the full error message for debugging
+            logger.warning(f"Claude process result error - subtype: {subtype}, full message: {json.dumps(message, indent=2)}")
+            
+            # Extract any error details from the message
+            error_detail = message.get('error', '')
+            error_msg = message.get('message', '')
+            
             # Provide user-friendly error messages based on error type
             error_messages = {
-                'error_during_execution': '⚠️ Process completed but encountered an issue during finalization. Generated files should still be valid.',
+                'error_during_execution': '⚠️ Process completed successfully but reported a minor issue. Your files have been generated and should be valid. This is typically just a notification and doesn\'t affect the output.',
                 'timeout': '⏱️ Process timed out. Consider breaking down your request into smaller tasks.',
                 'resource_limit': '💾 Process exceeded resource limits. Try with a smaller input or simpler query.',
                 'permission_denied': '🔒 Permission denied. Check file permissions and access rights.',
@@ -609,6 +665,11 @@ class ProcessManager:
             }
             
             user_friendly_message = error_messages.get(subtype, f"❌ Process error: {subtype}")
+            
+            # Add any additional error details if available
+            if error_detail or error_msg:
+                additional_info = error_detail or error_msg
+                logger.info(f"Additional error info: {additional_info}")
             
             app_state.message_queue.put({
                 'type': 'error',
@@ -947,48 +1008,72 @@ def get_issues():
         logger.error(f"Error reading issues: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
-@app.route('/api/core-prompt')
-def get_core_prompt():
-    """Get core prompt (ship.md) content"""
+@app.route('/api/prompts/<prompt_type>')
+def get_prompt(prompt_type):
+    """Get prompt content for specific type"""
     try:
-        # Use the same directory as the Flask app
+        # Map prompt types to files
+        file_map = {
+            'analyze': 'notes.md',
+            'plan': 'plan.md',
+            'migrate': 'ship.md',
+            'validate': 'validate.md'
+        }
+        
+        if prompt_type not in file_map:
+            return jsonify({'error': 'Invalid prompt type', 'success': False}), 400
+        
+        file_name = file_map[prompt_type]
         app_dir = os.path.dirname(os.path.abspath(__file__))
-        prompt_path = os.path.join(app_dir, 'prompts', 'ship.md')
+        prompt_path = os.path.join(app_dir, 'prompts', file_name)
+        
         if os.path.exists(prompt_path):
             with open(prompt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             return jsonify({'content': content, 'success': True})
         else:
-            return jsonify({'error': f'Core prompt file not found at: {prompt_path}', 'success': False}), 404
+            return jsonify({'error': f'Prompt file not found: {file_name}', 'success': False}), 404
     except Exception as e:
-        logger.error(f"Error reading core prompt: {e}")
+        logger.error(f"Error reading prompt {prompt_type}: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
-@app.route('/api/core-prompt', methods=['POST'])
-def save_core_prompt():
-    """Save core prompt (ship.md) with backup"""
+@app.route('/api/prompts/<prompt_type>', methods=['POST'])
+def save_prompt(prompt_type):
+    """Save prompt with backup to prompts-backup folder"""
     try:
+        # Map prompt types to files
+        file_map = {
+            'analyze': 'notes.md',
+            'plan': 'plan.md',
+            'migrate': 'ship.md',
+            'validate': 'validate.md'
+        }
+        
+        if prompt_type not in file_map:
+            return jsonify({'error': 'Invalid prompt type', 'success': False}), 400
+        
         data = request.json
         content = data.get('content', '')
         
         if not content:
             return jsonify({'error': 'No content provided', 'success': False}), 400
         
-        # Use the same directory as the Flask app
+        file_name = file_map[prompt_type]
         app_dir = os.path.dirname(os.path.abspath(__file__))
-        prompt_path = os.path.join(app_dir, 'prompts', 'ship.md')
+        prompt_path = os.path.join(app_dir, 'prompts', file_name)
         prompts_dir = os.path.dirname(prompt_path)
+        backup_dir = os.path.join(app_dir, 'prompts-backup')
         
-        # Ensure prompts directory exists
-        if not os.path.exists(prompts_dir):
-            os.makedirs(prompts_dir, exist_ok=True)
-            logger.info(f"Created prompts directory: {prompts_dir}")
+        # Ensure directories exist
+        os.makedirs(prompts_dir, exist_ok=True)
+        os.makedirs(backup_dir, exist_ok=True)
         
-        # Create backup with timestamp
+        # Create backup with timestamp if file exists
         timestamp = None
         if os.path.exists(prompt_path):
             timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-            backup_path = f"{prompt_path}.bak.{timestamp}"
+            backup_filename = f"{os.path.splitext(file_name)[0]}.{timestamp}{os.path.splitext(file_name)[1]}"
+            backup_path = os.path.join(backup_dir, backup_filename)
             shutil.copy2(prompt_path, backup_path)
             logger.info(f"Created backup: {backup_path}")
         
@@ -996,18 +1081,29 @@ def save_core_prompt():
         with open(prompt_path, 'w', encoding='utf-8') as f:
             f.write(content)
         
-        logger.info(f"Successfully saved core prompt to: {prompt_path}")
+        logger.info(f"Successfully saved prompt {prompt_type} to: {prompt_path}")
         
         return jsonify({
             'success': True,
-            'message': 'Core prompt saved successfully',
-            'backup': f"ship.md.bak.{timestamp}" if timestamp else None
+            'message': f'{file_name} saved successfully',
+            'backup': f"{os.path.splitext(file_name)[0]}.{timestamp}{os.path.splitext(file_name)[1]}" if timestamp else None
         })
         
     except Exception as e:
-        logger.error(f"Error saving core prompt: {e}")
+        logger.error(f"Error saving prompt {prompt_type}: {e}")
         logger.error(f"Stack trace: ", exc_info=True)
         return jsonify({'error': str(e), 'success': False}), 500
+
+# Keep old routes for backward compatibility
+@app.route('/api/core-prompt')
+def get_core_prompt():
+    """Get core prompt (ship.md) content - backward compatibility"""
+    return get_prompt('migrate')
+
+@app.route('/api/core-prompt', methods=['POST'])
+def save_core_prompt():
+    """Save core prompt (ship.md) with backup - backward compatibility"""
+    return save_prompt('migrate')
 
 @app.route('/api/context')
 def get_context():
@@ -1050,6 +1146,49 @@ def save_context():
         
     except Exception as e:
         logger.error(f"Error saving context: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/fix')
+def get_fix_issues():
+    """Get existing fix issues from fix.md"""
+    try:
+        fix_path = os.path.join(os.getcwd(), 'prompts', 'fix.md')
+        
+        if not os.path.exists(fix_path):
+            return jsonify({'success': True, 'issues': []})
+        
+        with open(fix_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Parse issues from the markdown content
+        issues = []
+        lines = content.split('\n')
+        current_issue = []
+        in_issue = False
+        
+        for line in lines:
+            if line.startswith('## Issue'):
+                if current_issue:
+                    issues.append({
+                        'id': len(issues) + 1,
+                        'text': '\n'.join(current_issue).strip()
+                    })
+                    current_issue = []
+                in_issue = True
+            elif line.startswith('---') or line.startswith('*Generated'):
+                if current_issue:
+                    issues.append({
+                        'id': len(issues) + 1,
+                        'text': '\n'.join(current_issue).strip()
+                    })
+                break
+            elif in_issue and line.strip():
+                current_issue.append(line)
+        
+        return jsonify({'success': True, 'issues': issues})
+        
+    except Exception as e:
+        logger.error(f"Error reading fix issues: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/api/fix', methods=['POST'])
@@ -1195,6 +1334,228 @@ def update_api_key():
     except Exception as e:
         logger.error(f"Error updating API key: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
+
+# Upload Routes
+@app.route('/api/upload', methods=['POST'])
+def upload_files():
+    """Handle file upload"""
+    try:
+        if 'files' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        files = request.files.getlist('files')
+        project_name = request.form.get('projectName')
+        
+        # If no project name provided, use the first file's directory name or a default
+        if not project_name and files:
+            first_file = files[0]
+            if '/' in first_file.filename:
+                # Extract the root folder name from the path
+                project_name = first_file.filename.split('/')[0]
+            else:
+                project_name = f'upload_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+        
+        # Create project folder directly in data folder
+        project_path = os.path.join(Config.DATA_FOLDER, secure_filename(project_name))
+            
+        os.makedirs(project_path, exist_ok=True)
+        
+        uploaded_files = []
+        for file in files:
+            if file and file.filename:
+                # Security check - validate file extension
+                file_ext = os.path.splitext(file.filename)[1].lower()
+                if file_ext not in Config.ALLOWED_EXTENSIONS and file_ext != '':
+                    logger.warning(f"Skipping file with disallowed extension: {file.filename}")
+                    continue
+                
+                # Preserve directory structure
+                filename = secure_filename(file.filename)
+                if '/' in file.filename:  # If file was uploaded with path
+                    # Create subdirectories
+                    file_parts = file.filename.split('/')
+                    subdir = os.path.join(project_path, *[secure_filename(part) for part in file_parts[:-1]])
+                    os.makedirs(subdir, exist_ok=True)
+                    filepath = os.path.join(subdir, secure_filename(file_parts[-1]))
+                else:
+                    filepath = os.path.join(project_path, filename)
+                
+                file.save(filepath)
+                uploaded_files.append(filename)
+                logger.info(f"Uploaded file: {filepath}")
+        
+        # Copy uploaded files to input folder if requested
+        if request.form.get('copyToInput') == 'true':
+            shutil.copytree(project_path, Config.INPUT_FOLDER, dirs_exist_ok=True)
+            logger.info(f"Copied uploaded files to input folder")
+        
+        return jsonify({
+            'success': True,
+            'fileCount': len(uploaded_files),
+            'projectPath': project_path,
+            'files': uploaded_files
+        })
+        
+    except Exception as e:
+        logger.error(f"Error uploading files: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/upload/zip', methods=['POST'])
+def upload_zip():
+    """Handle ZIP file upload and extraction"""
+    try:
+        if 'zipfile' not in request.files:
+            return jsonify({'error': 'No ZIP file provided'}), 400
+        
+        zip_file = request.files['zipfile']
+        if not zip_file.filename.endswith('.zip'):
+            return jsonify({'error': 'File must be a ZIP archive'}), 400
+        
+        # Use ZIP filename (without extension) as project name if not provided
+        project_name = request.form.get('projectName')
+        if not project_name:
+            project_name = os.path.splitext(zip_file.filename)[0]
+        
+        # Create project folder directly in data folder
+        project_path = os.path.join(Config.DATA_FOLDER, secure_filename(project_name))
+            
+        os.makedirs(project_path, exist_ok=True)
+        
+        # Save and extract ZIP file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_file:
+            zip_file.save(tmp_file.name)
+            
+            # Extract with security checks
+            extracted_files = []
+            with zipfile.ZipFile(tmp_file.name, 'r') as zip_ref:
+                # Check for malicious paths
+                for member in zip_ref.namelist():
+                    # Security check - prevent directory traversal
+                    if os.path.isabs(member) or '..' in member:
+                        logger.warning(f"Skipping potentially malicious path: {member}")
+                        continue
+                    
+                    # Check file extension
+                    file_ext = os.path.splitext(member)[1].lower()
+                    if file_ext not in Config.ALLOWED_EXTENSIONS and file_ext != '' and not member.endswith('/'):
+                        logger.warning(f"Skipping file with disallowed extension: {member}")
+                        continue
+                    
+                    # Extract file
+                    zip_ref.extract(member, project_path)
+                    extracted_files.append(member)
+                    logger.info(f"Extracted: {member}")
+            
+            # Remove temporary file
+            os.unlink(tmp_file.name)
+        
+        # Copy to input folder if requested
+        if request.form.get('copyToInput') == 'true':
+            shutil.copytree(project_path, Config.INPUT_FOLDER, dirs_exist_ok=True)
+            logger.info(f"Copied extracted files to input folder")
+        
+        return jsonify({
+            'success': True,
+            'fileCount': len(extracted_files),
+            'projectPath': project_path,
+            'files': extracted_files
+        })
+        
+    except zipfile.BadZipFile:
+        logger.error("Invalid ZIP file")
+        return jsonify({'error': 'Invalid ZIP file'}), 400
+    except Exception as e:
+        logger.error(f"Error processing ZIP file: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/projects')
+def list_projects():
+    """List available projects in data folder"""
+    try:
+        projects = []
+        # Skip system files like 'rules' and 'issues'
+        skip_items = {'rules', 'issues', 'uploads'}
+        
+        if os.path.exists(Config.DATA_FOLDER):
+            for item in os.listdir(Config.DATA_FOLDER):
+                if item in skip_items:
+                    continue
+                item_path = os.path.join(Config.DATA_FOLDER, item)
+                if os.path.isdir(item_path):
+                    # Get project info
+                    file_count = sum(1 for root, dirs, files in os.walk(item_path) for f in files)
+                    mod_time = os.path.getmtime(item_path)
+                    
+                    projects.append({
+                        'name': item,
+                        'path': item_path,
+                        'fileCount': file_count,
+                        'modified': datetime.fromtimestamp(mod_time).isoformat()
+                    })
+        
+        # Sort by modified time (newest first)
+        projects.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'projects': projects
+        })
+        
+    except Exception as e:
+        logger.error(f"Error listing projects: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/projects/<project_name>')
+def get_project_files(project_name):
+    """Get file tree for a specific project"""
+    try:
+        project_path = os.path.join(Config.DATA_FOLDER, secure_filename(project_name))
+        
+        if not os.path.exists(project_path):
+            return jsonify({'error': 'Project not found'}), 404
+        
+        file_tree = FileManager.get_file_tree(project_path)
+        
+        return jsonify({
+            'success': True,
+            'projectName': project_name,
+            'files': file_tree
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting project files: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/projects/<project_name>', methods=['DELETE'])
+def delete_project(project_name):
+    """Delete a project folder"""
+    try:
+        import shutil
+        
+        # Secure the project name
+        safe_project_name = secure_filename(project_name)
+        project_path = os.path.join(Config.DATA_FOLDER, safe_project_name)
+        
+        # Check if project exists
+        if not os.path.exists(project_path):
+            return jsonify({'error': 'Project not found'}), 404
+        
+        # Don't allow deletion of system folders
+        if safe_project_name in ['rules', 'issues', 'uploads']:
+            return jsonify({'error': 'Cannot delete system folders'}), 403
+        
+        # Delete the project folder
+        shutil.rmtree(project_path)
+        logger.info(f"Deleted project: {project_name}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Project {project_name} deleted successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error deleting project: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # Application Entry Point
 if __name__ == '__main__':

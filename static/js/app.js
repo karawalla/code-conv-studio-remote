@@ -44,71 +44,36 @@ const TASK_MAPPING = {
         query: 'Use task4.md from the prompts folder and perform the task',
         icon: '🔧',
         color: '#d97706'
+    },
+    'task5': {
+        name: 'Validate',
+        description: 'Validate Migration',
+        file: 'task5.md',
+        query: 'Use task5.md from the prompts folder and perform the task',
+        icon: '✓',
+        color: '#059669'
     }
 };
 
 const app = new AppState();
 
-// Theme Management
+// Theme Management - Light theme only
 class ThemeManager {
     constructor() {
-        this.theme = localStorage.getItem('theme') || 'dark';
+        // Always use light theme
+        this.theme = 'light';
         this.init();
     }
 
     init() {
-        this.applyTheme();
-        this.updateThemeIcon();
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-            if (this.theme === 'system') {
-                this.applyTheme();
-            }
-        });
-    }
-
-    applyTheme() {
+        // Ensure light theme is always applied
         const root = document.documentElement;
-
-        if (this.theme === 'dark' ||
-            (this.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
-        }
-    }
-
-    setTheme(theme) {
-        this.theme = theme;
-        localStorage.setItem('theme', theme);
-        this.applyTheme();
-        this.updateThemeIcon();
+        root.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
     }
 
     toggleTheme() {
-        const themes = ['light', 'dark', 'system'];
-        const currentIndex = themes.indexOf(this.theme);
-        const nextIndex = (currentIndex + 1) % themes.length;
-        this.setTheme(themes[nextIndex]);
-    }
-
-    updateThemeIcon() {
-        const sunIcon = document.getElementById('sunIcon');
-        const moonIcon = document.getElementById('moonIcon');
-
-        if (!sunIcon || !moonIcon) return;
-
-        const isDark = this.theme === 'dark' ||
-            (this.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-        if (isDark) {
-            sunIcon.style.display = 'none';
-            moonIcon.style.display = 'block';
-        } else {
-            sunIcon.style.display = 'block';
-            moonIcon.style.display = 'none';
-        }
+        // No-op - theme switching disabled
     }
 }
 
@@ -926,7 +891,11 @@ function switchExplorerTab(tabType) {
     document.querySelectorAll('.explorer-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    document.getElementById(tabType + 'Tab').classList.add('active');
+    
+    const activeTab = document.getElementById(tabType + 'Tab');
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
 
     // Show/hide input folder info
     const infoBar = document.getElementById('inputFolderInfo');
@@ -937,8 +906,13 @@ function switchExplorerTab(tabType) {
         infoBar.style.display = 'none';
     }
 
-    // Refresh file tree for the selected tab
-    refreshFileTree();
+    // Handle projects tab differently
+    if (tabType === 'projects') {
+        showProjectsList();
+    } else {
+        // Refresh file tree for the selected tab
+        refreshFileTree();
+    }
 }
 
 // Update input folder info display
@@ -1477,67 +1451,44 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Global keyboard shortcuts for task selection
-    document.addEventListener('keydown', function(e) {
-        // Only handle shortcuts if not in input fields, textareas and not in custom query mode
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !app.isCustomQueryMode) {
-            switch(e.key) {
-                case '1':
-                    e.preventDefault();
-                    selectTask('task1');
-                    break;
-                case '2':
-                    e.preventDefault();
-                    selectTask('task2');
-                    break;
-                case '3':
-                    e.preventDefault();
-                    selectTask('task3');
-                    break;
-                case ' ':
-                    e.preventDefault();
-                    if (queryInput.value.trim() && !document.getElementById('processBtn').disabled) {
-                        startProcess();
-                    }
-                    break;
-            }
-        }
-    });
+    // Removed global keyboard shortcuts to fix button issues
 
     // Refresh files button
-    document.getElementById('refreshFiles').addEventListener('click', refreshFileTree);
+    const refreshFilesBtn = document.getElementById('refreshFiles');
+    if (refreshFilesBtn) {
+        refreshFilesBtn.addEventListener('click', refreshFileTree);
+    }
 
     // Go up folder button
-    document.getElementById('goUpFolder').addEventListener('click', () => {
-        fileExplorerManager.goUp();
-    });
+    const goUpFolderBtn = document.getElementById('goUpFolder');
+    if (goUpFolderBtn) {
+        goUpFolderBtn.addEventListener('click', () => {
+            fileExplorerManager.goUp();
+        });
+    }
 
     // Clear logs button
-    document.getElementById('clearLogs').addEventListener('click', clearLogs);
+    const clearLogsBtn = document.getElementById('clearLogs');
+    if (clearLogsBtn) {
+        clearLogsBtn.addEventListener('click', clearLogs);
+    }
 
     // Close all tabs button
-    document.getElementById('closeAllTabs').addEventListener('click', closeAllTabs);
+    const closeAllTabsBtn = document.getElementById('closeAllTabs');
+    if (closeAllTabsBtn) {
+        closeAllTabsBtn.addEventListener('click', closeAllTabs);
+    }
 
     // Theme toggle button
-    document.getElementById('themeToggle').addEventListener('click', () => {
-        themeManager.toggleTheme();
-    });
-
-    // Explorer tab buttons
-    const inputTab = document.getElementById('inputTab');
-    const outputTab = document.getElementById('outputTab');
-    
-    if (inputTab) {
-        inputTab.addEventListener('click', () => {
-            switchExplorerTab('input');
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            themeManager.toggleTheme();
         });
     }
 
-    if (outputTab) {
-        outputTab.addEventListener('click', () => {
-            switchExplorerTab('output');
-        });
-    }
+    // Explorer tab buttons - now handled by onclick in HTML
+    // Event listeners removed to avoid conflicts
 
     // Initialize file tree
     refreshFileTree();
@@ -1601,7 +1552,14 @@ function browseFolders(path = null) {
         .then(data => {
             if (data.success) {
                 currentBrowserPath = data.path;
-                currentPathElement.textContent = data.path;
+                // Show path relative to data folder for cleaner display
+                const dataFolderPath = '/home/ubuntu/code-conv-studio/data';
+                if (data.path.startsWith(dataFolderPath)) {
+                    const relativePath = data.path.substring(dataFolderPath.length) || '/';
+                    currentPathElement.textContent = 'data' + relativePath;
+                } else {
+                    currentPathElement.textContent = data.path;
+                }
                 renderFolderList(data.items);
             } else {
                 folderList.innerHTML = `
@@ -1700,9 +1658,15 @@ function renderFolderList(items) {
                 item.classList.add('selected');
                 selectedFolderPath = item.dataset.path;
 
-                // Update selected folder display
+                // Update selected folder display with relative path
                 const selectedFolderElement = document.getElementById('selectedFolder');
-                selectedFolderElement.textContent = selectedFolderPath;
+                const dataFolderPath = '/home/ubuntu/code-conv-studio/data';
+                if (selectedFolderPath.startsWith(dataFolderPath)) {
+                    const relativePath = selectedFolderPath.substring(dataFolderPath.length) || '/';
+                    selectedFolderElement.textContent = 'data' + relativePath;
+                } else {
+                    selectedFolderElement.textContent = selectedFolderPath;
+                }
 
                 // Enable confirm button
                 const confirmBtn = document.getElementById('confirmFolderBtn');
@@ -1845,18 +1809,50 @@ async function viewIssues() {
     }
 }
 
+// Track current prompt type
+let currentPromptType = 'migrate';
+
 async function viewCorePrompt() {
     const modal = document.getElementById('corePromptModal');
+    modal.style.display = 'flex';
+    
+    // Default to migrate tab
+    currentPromptType = 'migrate';
+    switchPromptTab('migrate');
+}
+
+async function switchPromptTab(promptType) {
+    // Update active tab
+    document.querySelectorAll('.prompt-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.prompt === promptType);
+    });
+    
+    currentPromptType = promptType;
+    
+    // Update current file display
+    const fileMap = {
+        'analyze': 'notes.md',
+        'plan': 'plan.md',
+        'migrate': 'ship.md',
+        'validate': 'validate.md'
+    };
+    
+    document.getElementById('currentPromptFile').textContent = fileMap[promptType];
+    
+    // Load the appropriate file
+    await loadPromptFile(promptType);
+}
+
+async function loadPromptFile(promptType) {
     const editor = document.getElementById('corePromptEditor');
     const status = document.getElementById('editorStatus');
     
-    modal.style.display = 'flex';
-    editor.value = 'Loading core prompt...';
+    editor.value = 'Loading prompt...';
     editor.disabled = true;
     status.textContent = 'Loading...';
     
     try {
-        const response = await fetch('/api/core-prompt');
+        const response = await fetch(`/api/prompts/${promptType}`);
         const data = await response.json();
         
         if (data.success) {
@@ -1864,23 +1860,57 @@ async function viewCorePrompt() {
             editor.disabled = false;
             status.textContent = 'Ready';
         } else {
-            editor.value = `Failed to load core prompt: ${data.error}`;
+            editor.value = `Failed to load prompt: ${data.error}`;
             status.textContent = 'Error';
         }
     } catch (error) {
-        console.error('Error loading core prompt:', error);
-        editor.value = 'Error loading core prompt';
+        console.error('Error loading prompt:', error);
+        editor.value = 'Error loading prompt';
         status.textContent = 'Error';
     }
 }
 
-async function saveCorePrompt() {
+// Custom confirmation dialog
+let confirmResolve = null;
+
+function showConfirm(title, message) {
+    return new Promise((resolve) => {
+        confirmResolve = resolve;
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmModal').style.display = 'flex';
+    });
+}
+
+function closeConfirmModal(result) {
+    document.getElementById('confirmModal').style.display = 'none';
+    if (confirmResolve) {
+        confirmResolve(result);
+        confirmResolve = null;
+    }
+}
+
+async function saveCurrentPrompt() {
     const editor = document.getElementById('corePromptEditor');
     const status = document.getElementById('editorStatus');
     const saveBtn = document.getElementById('saveCorePromptBtn');
     const backupInfo = document.getElementById('lastBackup');
     
-    if (!confirm('Are you sure you want to save changes to ship.md? A backup will be created.')) {
+    const fileMap = {
+        'analyze': 'notes.md',
+        'plan': 'plan.md',
+        'migrate': 'ship.md',
+        'validate': 'validate.md'
+    };
+    
+    const fileName = fileMap[currentPromptType];
+    
+    const confirmed = await showConfirm(
+        'Save Changes',
+        `Are you sure you want to save changes to ${fileName}? A backup will be created in the prompts-backup folder.`
+    );
+    
+    if (!confirmed) {
         return;
     }
     
@@ -1888,7 +1918,7 @@ async function saveCorePrompt() {
     status.textContent = 'Saving...';
     
     try {
-        const response = await fetch('/api/core-prompt', {
+        const response = await fetch(`/api/prompts/${currentPromptType}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1908,15 +1938,22 @@ async function saveCorePrompt() {
             }, 3000);
         } else {
             status.textContent = 'Save failed';
-            alert(`Failed to save: ${data.error}`);
+            console.error(`Failed to save: ${data.error}`);
+            // Use custom alert for errors too
+            await showConfirm('Save Failed', `Failed to save: ${data.error}`);
         }
     } catch (error) {
-        console.error('Error saving core prompt:', error);
+        console.error('Error saving prompt:', error);
         status.textContent = 'Save error';
-        alert('Error saving core prompt');
+        await showConfirm('Save Error', 'An error occurred while saving the prompt.');
     } finally {
         saveBtn.disabled = false;
     }
+}
+
+// Keep old function name for backward compatibility
+async function saveCorePrompt() {
+    return saveCurrentPrompt();
 }
 
 function formatRules(content) {
@@ -2437,3 +2474,523 @@ window.addNewIssue = addNewIssue;
 window.removeIssue = removeIssue;
 window.updateIssueText = updateIssueText;
 window.saveFixIssues = saveFixIssues;
+
+// Upload Modal Functions
+function openUploadModal() {
+    document.getElementById('uploadModal').style.display = 'flex';
+    resetUploadModal();
+}
+
+function closeUploadModal() {
+    document.getElementById('uploadModal').style.display = 'none';
+}
+
+function resetUploadModal() {
+    document.getElementById('uploadArea').style.display = 'block';
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadResults').style.display = 'none';
+}
+
+// Handle drag and drop
+const uploadArea = document.getElementById('uploadArea');
+if (uploadArea) {
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        // Check if it's a single ZIP file
+        const files = e.dataTransfer.files;
+        if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+            handleZipFile(files[0]);
+        } else {
+            handleFiles(files);
+        }
+    });
+}
+
+// Handle file selection
+function handleFileSelect(event) {
+    handleFiles(event.target.files);
+}
+
+function handleZipSelect(event) {
+    const file = event.target.files[0];
+    if (file && file.name.endsWith('.zip')) {
+        handleZipFile(file);
+    } else {
+        showMessage('Please select a valid ZIP file', 'error');
+    }
+}
+
+// Handle files upload
+async function handleFiles(files) {
+    if (files.length === 0) return;
+
+    const formData = new FormData();
+
+    // Add files to FormData
+    for (let file of files) {
+        formData.append('files', file);
+    }
+
+    // Show progress
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('uploadProgress').style.display = 'block';
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        showUploadSuccess(result);
+    } catch (error) {
+        showUploadError(error.message);
+    }
+}
+
+// Handle ZIP file upload
+async function handleZipFile(file) {
+    const formData = new FormData();
+    formData.append('zipfile', file);
+
+    // Show progress
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('uploadProgress').style.display = 'block';
+
+    try {
+        // Create XMLHttpRequest for progress tracking
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                updateProgressBar(percentComplete);
+            }
+        });
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const result = JSON.parse(xhr.responseText);
+                showUploadSuccess(result);
+            } else {
+                throw new Error(`Upload failed: ${xhr.statusText}`);
+            }
+        };
+
+        xhr.onerror = function() {
+            showUploadError('Network error occurred');
+        };
+
+        xhr.open('POST', '/api/upload/zip');
+        xhr.send(formData);
+    } catch (error) {
+        showUploadError(error.message);
+    }
+}
+
+function updateProgressBar(percent) {
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    progressFill.style.width = percent + '%';
+    progressText.textContent = `Uploading... ${Math.round(percent)}%`;
+}
+
+function showUploadSuccess(result) {
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadResults').style.display = 'block';
+    
+    const message = document.getElementById('resultMessage');
+    message.textContent = `Successfully uploaded ${result.fileCount || 0} files to ${result.projectPath || 'data folder'}`;
+    
+    // Refresh file explorer after successful upload
+    setTimeout(() => {
+        closeUploadModal();
+        fetchFiles();
+    }, 2000);
+}
+
+function showUploadError(error) {
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadResults').style.display = 'block';
+    
+    const resultsDiv = document.getElementById('uploadResults');
+    resultsDiv.innerHTML = `
+        <h4 style="color: var(--destructive);">Upload Failed</h4>
+        <p class="result-message">${error}</p>
+    `;
+}
+
+// No destination selection needed anymore
+
+// Export upload functions
+window.openUploadModal = openUploadModal;
+window.closeUploadModal = closeUploadModal;
+window.handleFileSelect = handleFileSelect;
+window.handleZipSelect = handleZipSelect;
+
+// Fix Modal Functions
+// fixIssues already declared earlier in the file
+
+function openFixModal() {
+    const modal = document.getElementById('fixModal');
+    modal.style.display = 'flex';
+    
+    // Load existing issues from fix.md if it exists
+    loadExistingIssues();
+}
+
+function closeFixModal() {
+    const modal = document.getElementById('fixModal');
+    modal.style.display = 'none';
+}
+
+async function loadExistingIssues() {
+    try {
+        const response = await fetch('/api/fix');
+        const data = await response.json();
+        
+        if (data.success && data.issues) {
+            fixIssues = data.issues;
+            renderIssuesList();
+        } else {
+            // Start with empty list
+            fixIssues = [];
+            renderIssuesList();
+        }
+    } catch (error) {
+        console.error('Error loading existing issues:', error);
+        fixIssues = [];
+        renderIssuesList();
+    }
+}
+
+function addNewIssue() {
+    const newIssue = {
+        id: Date.now(),
+        text: '',
+        isNew: true
+    };
+    fixIssues.push(newIssue);
+    renderIssuesList();
+    
+    // Focus on the new issue
+    setTimeout(() => {
+        const textarea = document.querySelector(`#issue-${newIssue.id}`);
+        if (textarea) {
+            textarea.focus();
+        }
+    }, 100);
+}
+
+function removeIssue(id) {
+    fixIssues = fixIssues.filter(issue => issue.id !== id);
+    renderIssuesList();
+}
+
+function updateIssue(id, text) {
+    const issue = fixIssues.find(issue => issue.id === id);
+    if (issue) {
+        issue.text = text;
+        issue.isNew = false;
+    }
+}
+
+function renderIssuesList() {
+    const container = document.getElementById('issuesList');
+    
+    if (fixIssues.length === 0) {
+        container.innerHTML = `
+            <div class="empty-issues">
+                <p>No issues added yet. Click "Add Issue" to start.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    fixIssues.forEach((issue, index) => {
+        html += `
+            <div class="issue-item">
+                <div class="issue-header">
+                    <span class="issue-number">Issue ${index + 1}</span>
+                    <button class="btn btn-ghost btn-icon" onclick="removeIssue(${issue.id})" title="Remove issue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+                <textarea
+                    id="issue-${issue.id}"
+                    class="issue-textarea"
+                    placeholder="Describe the issue that needs to be fixed..."
+                    onchange="updateIssue(${issue.id}, this.value)"
+                    onblur="updateIssue(${issue.id}, this.value)"
+                >${issue.text || ''}</textarea>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+async function saveFixIssues() {
+    // Simple save without validation - reverting to original
+    const issueTexts = [];
+    fixIssues.forEach(issue => {
+        if (issue.text && issue.text.trim()) {
+            issueTexts.push(issue.text.trim());
+        }
+    });
+    
+    if (issueTexts.length === 0) {
+        alert('Please add at least one issue before saving.');
+        return;
+    }
+    
+    try {
+        // Save issues to fix.md
+        const response = await fetch('/api/fix', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                issues: issueTexts
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`Successfully saved ${data.issues_count} issue(s) to fix.md`);
+            closeFixModal();
+        } else {
+            alert(`Failed to save issues: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error saving fix issues:', error);
+        alert('Error saving fix issues');
+    }
+}
+
+// Export fix functions
+window.openFixModal = openFixModal;
+window.closeFixModal = closeFixModal;
+window.addNewIssue = addNewIssue;
+window.removeIssue = removeIssue;
+window.saveFixIssues = saveFixIssues;
+
+// Projects Management Functions
+function showProjectsList() {
+    const container = document.getElementById('currentFolderView');
+    
+    // Show loading skeleton
+    LoadingManager.showFileTreeSkeleton();
+    
+    // Fetch projects list
+    fetch('/api/projects')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.projects) {
+                displayProjectsList(data.projects);
+            } else {
+                showEmptyProjects();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching projects:', error);
+            container.innerHTML = `
+                <div class="empty-folder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    <p>Error loading projects: ${error.message}</p>
+                </div>
+            `;
+        });
+}
+
+function displayProjectsList(projects) {
+    const container = document.getElementById('currentFolderView');
+    
+    if (!projects || projects.length === 0) {
+        showEmptyProjects();
+        return;
+    }
+    
+    // Clear breadcrumbs for projects view
+    const breadcrumbTabs = document.getElementById('breadcrumbTabs');
+    breadcrumbTabs.innerHTML = `
+        <button class="breadcrumb-tab active" data-path="">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            Projects
+        </button>
+    `;
+    
+    // Create projects grid
+    let html = '<div class="projects-grid">';
+    
+    projects.forEach(project => {
+        const modDate = new Date(project.modified);
+        const formattedDate = modDate.toLocaleDateString() + ' ' + modDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        html += `
+            <div class="project-card" onclick="selectProject('${project.name}')">
+                <div class="project-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                </div>
+                <div class="project-info">
+                    <h3 class="project-name">${project.name}</h3>
+                    <p class="project-meta">${project.fileCount} files • ${formattedDate}</p>
+                </div>
+                <div class="project-actions">
+                    <button class="btn btn-ghost btn-icon" onclick="event.stopPropagation(); useProjectAsInput('${project.name}')" title="Use as input">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-ghost btn-icon delete-btn" onclick="event.stopPropagation(); deleteProject('${project.name}')" title="Delete project">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function showEmptyProjects() {
+    const container = document.getElementById('currentFolderView');
+    container.innerHTML = `
+        <div class="empty-folder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <p>No projects uploaded yet</p>
+            <button class="btn btn-primary btn-sm" onclick="openUploadModal()" style="margin-top: 12px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                Upload Files
+            </button>
+        </div>
+    `;
+}
+
+function selectProject(projectName) {
+    // Load project files
+    fetch(`/api/projects/${projectName}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update breadcrumb
+                const breadcrumbTabs = document.getElementById('breadcrumbTabs');
+                breadcrumbTabs.innerHTML = `
+                    <button class="breadcrumb-tab" data-path="" onclick="showProjectsList()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                        Projects
+                    </button>
+                    <button class="breadcrumb-tab active" data-path="${projectName}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                        ${projectName}
+                    </button>
+                `;
+                
+                // Display project files
+                fileExplorerManager.refresh(data.files);
+            } else {
+                showMessage('Failed to load project files', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading project:', error);
+            showMessage('Error loading project', 'error');
+        });
+}
+
+function useProjectAsInput(projectName) {
+    if (confirm(`Use "${projectName}" as the input folder for processing?`)) {
+        const projectPath = `/home/ubuntu/code-conv-studio/data/${projectName}`;
+        
+        fetch('/api/input/select', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ path: projectPath })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(`Project "${projectName}" set as input folder`, 'success');
+                // Switch to input tab to show the selected project
+                switchExplorerTab('input');
+            } else {
+                showMessage(data.error || 'Failed to set input folder', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error setting input folder:', error);
+            showMessage('Error setting input folder', 'error');
+        });
+    }
+}
+
+// Delete project function
+function deleteProject(projectName) {
+    if (confirm(`Are you sure you want to delete the project "${projectName}"? This action cannot be undone.`)) {
+        fetch(`/api/projects/${encodeURIComponent(projectName)}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(`Project "${projectName}" deleted successfully`, 'success');
+                // Refresh the projects list
+                showProjectsList();
+            } else {
+                showMessage(data.error || 'Failed to delete project', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting project:', error);
+            showMessage('Error deleting project', 'error');
+        });
+    }
+}
+
+// Export project functions
+window.selectProject = selectProject;
+window.useProjectAsInput = useProjectAsInput;
+window.deleteProject = deleteProject;
+
+// Export explorer tab functions
+window.switchExplorerTab = switchExplorerTab;
