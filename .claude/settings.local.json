@@ -43,7 +43,20 @@
       "WebFetch(domain:github.com)",
       "Bash(touch:*)",
       "Bash(cp:*)",
-      "Bash(diff:*)"
+      "Bash(diff:*)",
+      "Bash(git stash:*)",
+      "Bash(journalctl:*)",
+      "Bash(python3:*)",
+      "Bash(cat:*)",
+      "Bash(systemctl status:*)",
+      "Bash(sudo systemctl list-units:*)",
+      "Bash(who)",
+      "Bash(./stop.sh)",
+      "Bash(gh pr merge:*)",
+      "Bash(kill:*)",
+      "Bash(sudo systemctl restart:*)",
+      "Bash(sudo journalctl:*)",
+      "Bash(./start.sh:*)"
     ],
     "deny": []
   }

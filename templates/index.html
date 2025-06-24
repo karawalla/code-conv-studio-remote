@@ -153,6 +153,12 @@
                                 <span class="task-desc">Ship JSON</span>
                                 <span class="task-shortcut">3</span>
                             </button>
+                            <button class="task-btn" id="fixBtn" title="Add fix issues for migration" onclick="openFixModal()">
+                                <span class="task-icon">🔧</span>
+                                <span class="task-name">Fix</span>
+                                <span class="task-desc">Add Issues</span>
+                                <span class="task-shortcut">F</span>
+                            </button>
                         </div>
                         <div class="task-or-divider">
                             <span>or</span>
@@ -434,6 +440,46 @@ Example:
                 </div>
                 <div class="editor-status">
                     <span id="contextStatus">Ready</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fix Modal -->
+    <div id="fixModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Fix Issues</h3>
+                <div class="modal-header-actions">
+                    <button class="btn btn-primary btn-sm" onclick="saveFixIssues()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2"/>
+                        </svg>
+                        Save
+                    </button>
+                    <button class="btn btn-ghost btn-icon" onclick="closeFixModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="fix-content">
+                    <div class="fix-description">
+                        <p>Add issues that need to be fixed during migration. Each issue will be saved to fix.md for processing.</p>
+                    </div>
+                    <div class="fix-controls">
+                        <button class="btn btn-primary btn-sm" onclick="addNewIssue()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add Issue
+                        </button>
+                    </div>
+                    <div id="issuesList" class="issues-list">
+                        <!-- Issues will be dynamically added here -->
+                    </div>
                 </div>
             </div>
         </div>

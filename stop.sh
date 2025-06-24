@@ -1,103 +1,120 @@
 #!/bin/bash
 
-# stop.sh - Stop all Code Conversion Studio processes
-# This script safely terminates all running processes related to the application
+# Code Conversion Studio - Stop Script
+# Stops the service and all related processes
+
+set -e
 
 echo "🛑 Stopping Code Conversion Studio..."
 
-# Function to kill processes by pattern
-kill_processes() {
-    local pattern="$1"
-    local description="$2"
-    
-    echo "  Checking for $description processes..."
-    
-    # Find processes matching the pattern
-    pids=$(pgrep -f "$pattern" 2>/dev/null)
-    
-    if [ -n "$pids" ]; then
-        echo "  Found $description processes: $pids"
-        echo "  Terminating $description processes..."
-        
-        # Try graceful termination first
-        pkill -TERM -f "$pattern" 2>/dev/null
-        sleep 2
-        
-        # Check if processes are still running
-        remaining_pids=$(pgrep -f "$pattern" 2>/dev/null)
-        if [ -n "$remaining_pids" ]; then
-            echo "  Force killing remaining $description processes..."
-            pkill -KILL -f "$pattern" 2>/dev/null
-            sleep 1
-        fi
-        
-        # Verify termination
-        final_pids=$(pgrep -f "$pattern" 2>/dev/null)
-        if [ -z "$final_pids" ]; then
-            echo "  ✅ $description processes stopped successfully"
-        else
-            echo "  ⚠️  Some $description processes may still be running: $final_pids"
-        fi
-    else
-        echo "  ✅ No $description processes found"
-    fi
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then
+    echo "❌ Do not run this script as root. Run as ubuntu user."
+    exit 1
+fi
+
+# Function to check if service exists
+service_exists() {
+    systemctl list-unit-files | grep -q "^code-conv-studio.service"
 }
 
-# Stop Flask application
-kill_processes "app\.py" "Flask application"
+# Function to check if service is running
+service_running() {
+    systemctl is-active --quiet code-conv-studio 2>/dev/null
+}
 
-# Stop Claude processes
-kill_processes "claude" "Claude"
-
-# Stop any conversion processes
-kill_processes "process.*convert" "conversion"
-
-# Stop any Python processes in the service directory
-echo "  Checking for Python processes in service directory..."
-service_python_pids=$(ps aux | grep python | grep "$(pwd)" | grep -v grep | awk '{print $2}' 2>/dev/null)
-if [ -n "$service_python_pids" ]; then
-    echo "  Found service Python processes: $service_python_pids"
-    echo "  Terminating service Python processes..."
-    echo "$service_python_pids" | xargs kill -TERM 2>/dev/null
-    sleep 2
-    
-    # Force kill if still running
-    remaining_service_pids=$(ps aux | grep python | grep "$(pwd)" | grep -v grep | awk '{print $2}' 2>/dev/null)
-    if [ -n "$remaining_service_pids" ]; then
-        echo "  Force killing remaining service Python processes..."
-        echo "$remaining_service_pids" | xargs kill -KILL 2>/dev/null
+# Stop the systemd service if it exists and is running
+if service_exists; then
+    if service_running; then
+        echo "🔧 Stopping code-conv-studio service..."
+        sudo systemctl stop code-conv-studio
+        
+        # Wait for service to stop
+        echo "⏳ Waiting for service to stop..."
+        sleep 3
+        
+        if service_running; then
+            echo "⚠️  Service is taking longer to stop, waiting a bit more..."
+            sleep 5
+        fi
+        
+        if service_running; then
+            echo "❌ Service failed to stop gracefully, forcing stop..."
+            sudo systemctl kill code-conv-studio
+            sleep 2
+        fi
+        
+        echo "✅ Service stopped successfully"
+    else
+        echo "ℹ️  Service is not running"
     fi
-    echo "  ✅ Service Python processes stopped"
 else
-    echo "  ✅ No service Python processes found"
+    echo "ℹ️  Systemd service not found, checking for manual processes..."
 fi
 
-# Check for any remaining processes on port 5003
-echo "  Checking for processes on port 5003..."
-port_pids=$(lsof -ti:5003 2>/dev/null)
-if [ -n "$port_pids" ]; then
-    echo "  Found processes on port 5003: $port_pids"
-    echo "  Terminating processes on port 5003..."
-    echo "$port_pids" | xargs kill -TERM 2>/dev/null
-    sleep 2
+# Kill any remaining processes
+echo "🔍 Checking for remaining processes..."
+
+# Find Python processes running app.py
+PIDS=$(pgrep -f "python.*app.py" 2>/dev/null || true)
+if [ -n "$PIDS" ]; then
+    echo "🔧 Stopping Python app processes..."
+    for pid in $PIDS; do
+        echo "   Stopping PID: $pid"
+        kill -TERM "$pid" 2>/dev/null || true
+    done
+    
+    # Wait a bit for graceful shutdown
+    sleep 3
     
     # Force kill if still running
-    remaining_port_pids=$(lsof -ti:5003 2>/dev/null)
-    if [ -n "$remaining_port_pids" ]; then
-        echo "  Force killing remaining processes on port 5003..."
-        echo "$remaining_port_pids" | xargs kill -KILL 2>/dev/null
+    PIDS=$(pgrep -f "python.*app.py" 2>/dev/null || true)
+    if [ -n "$PIDS" ]; then
+        echo "🔧 Force stopping remaining processes..."
+        for pid in $PIDS; do
+            echo "   Force stopping PID: $pid"
+            kill -KILL "$pid" 2>/dev/null || true
+        done
     fi
-    echo "  ✅ Port 5003 processes stopped"
-else
-    echo "  ✅ No processes found on port 5003"
 fi
 
-echo ""
-echo "🎯 Stop Summary:"
-echo "  - Flask application processes: stopped"
-echo "  - Claude processes: stopped"
-echo "  - Conversion processes: stopped"
-echo "  - Port 5003: cleared"
-echo ""
-echo "✅ Code Conversion Studio stopped successfully!"
-echo "   You can now start fresh with ./start.sh"
+# Kill any remaining Claude processes
+CLAUDE_PIDS=$(pgrep -f "claude" 2>/dev/null || true)
+if [ -n "$CLAUDE_PIDS" ]; then
+    echo "🔧 Stopping Claude processes..."
+    for pid in $CLAUDE_PIDS; do
+        echo "   Stopping Claude PID: $pid"
+        kill -TERM "$pid" 2>/dev/null || true
+    done
+    sleep 2
+fi
+
+# Check if port 80 is still in use
+if lsof -Pi :80 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "⚠️  Port 80 is still in use by another process"
+    echo "   Use 'sudo lsof -Pi :80 -sTCP:LISTEN' to identify the process"
+else
+    echo "✅ Port 80 is now available"
+fi
+
+# Final status check
+echo "📊 Final status check..."
+if service_exists && service_running; then
+    echo "❌ Service is still running"
+    exit 1
+elif [ -n "$(pgrep -f 'python.*app.py' 2>/dev/null || true)" ]; then
+    echo "❌ Some Python processes are still running"
+    exit 1
+else
+    echo "✅ Code Conversion Studio stopped successfully"
+    echo ""
+    echo "📍 Status:"
+    if service_exists; then
+        echo "   • Service Status: $(systemctl is-active code-conv-studio 2>/dev/null || echo 'inactive')"
+        echo "   • Auto-start: $(systemctl is-enabled code-conv-studio 2>/dev/null || echo 'disabled')"
+    fi
+    echo "   • Port 80: Available"
+    echo "   • Python Processes: None"
+    echo ""
+    echo "🚀 To start again: ./start.sh"
+fi

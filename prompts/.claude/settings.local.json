@@ -10,7 +10,14 @@
       "Bash(claude auth status)",
       "Bash(claude login --help)",
       "Bash(claude --version)",
-      "Bash(claude:*)"
+      "Bash(claude:*)",
+      "Bash(git checkout origin/main -- ship.md)",
+      "Bash(rg:*)",
+      "Bash(ss:*)",
+      "Bash(sudo kill:*)",
+      "Bash(sudo pkill:*)",
+      "Bash(sudo cat:*)",
+      "Bash(sudo sed:*)"
     ],
     "deny": []
   }

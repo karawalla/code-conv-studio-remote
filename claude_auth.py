@@ -252,6 +252,7 @@ class EnhancedProcessManager:
         """Start Claude process with authentication and retry logic"""
         max_retries = 3
         retry_count = 0
+        process = None
         
         while retry_count < max_retries:
             try:
@@ -293,8 +294,25 @@ class EnhancedProcessManager:
                 stderr_output = process.stderr.read()
                 if stderr_output:
                     logger.error(f"Process stderr: {stderr_output}")
+                    
+                    # Check for --api-key-helper compatibility issues
+                    if "unknown option '--api-key-helper'" in stderr_output:
+                        logger.warning("Claude CLI doesn't support --api-key-helper flag, falling back to standard execution")
+                        raise Exception("Claude CLI compatibility issue: --api-key-helper not supported")
                 
-                process.wait()
+                # Wait for process with timeout to prevent zombies
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    logger.warning("Process didn't exit cleanly within timeout, terminating")
+                    process.terminate()
+                    try:
+                        process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        logger.error("Process didn't terminate, killing forcefully")
+                        process.kill()
+                        process.wait()
+                
                 logger.info(f"Process completed with return code: {process.returncode}")
                 
                 # Check return code for auth issues
@@ -308,6 +326,18 @@ class EnhancedProcessManager:
                 
             except Exception as e:
                 logger.error(f"Error in process execution: {e}")
+                # Clean up process if it exists
+                if process:
+                    try:
+                        process.terminate()
+                        process.wait(timeout=2)
+                    except:
+                        try:
+                            process.kill()
+                            process.wait()
+                        except:
+                            pass
+                
                 if retry_count < max_retries - 1:
                     retry_count += 1
                     time.sleep(2 ** retry_count)  # Exponential backoff
