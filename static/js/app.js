@@ -906,6 +906,11 @@ function switchExplorerTab(tabType) {
         infoBar.style.display = 'none';
     }
 
+    // Reset to root folder when switching tabs
+    if (fileExplorerManager) {
+        fileExplorerManager.navigateToPath('');
+    }
+
     // Handle projects tab differently
     if (tabType === 'projects') {
         showProjectsList();

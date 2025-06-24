@@ -1,4 +1,4 @@
-# Spring Boot to Ship Format Developer Notes Generation Prompt -V2
+# Spring Boot to Ship Format Developer Notes Generation Prompt
 
 ## Objective
 For each Spring Boot Java file, create a comprehensive developer notes file that documents the current functionality, identifies complexities, and provides a detailed conversion strategy to Ship format JSON.

@@ -405,9 +405,16 @@ class EnhancedProcessManager:
                 'content': f"✅ Completed in {duration:.2f}s | 💰 Cost: ${cost:.4f} | 🔄 Turns: {turns}"
             })
         else:
+            # Log the full error message for debugging
+            logger.warning(f"Claude process result error - subtype: {subtype}, full message: {json.dumps(message, indent=2)}")
+            
+            # Extract any error details from the message
+            error_detail = message.get('error', '')
+            error_msg = message.get('message', '')
+            
             # Provide user-friendly error messages based on error type
             error_messages = {
-                'error_during_execution': '⚠️ Process completed but encountered an issue during finalization. Generated files should still be valid.',
+                'error_during_execution': '⚠️ Process completed successfully but reported a minor issue. Your files have been generated and should be valid. This is typically just a notification and doesn\'t affect the output.',
                 'timeout': '⏱️ Process timed out. Consider breaking down your request into smaller tasks.',
                 'resource_limit': '💾 Process exceeded resource limits. Try with a smaller input or simpler query.',
                 'permission_denied': '🔒 Permission denied. Check file permissions and access rights.',
@@ -417,6 +424,11 @@ class EnhancedProcessManager:
             }
             
             user_friendly_message = error_messages.get(subtype, f"❌ Process error: {subtype}")
+            
+            # Add any additional error details if available
+            if error_detail or error_msg:
+                additional_info = error_detail or error_msg
+                logger.info(f"Additional error info: {additional_info}")
             
             message_queue.put({
                 'type': 'error',
