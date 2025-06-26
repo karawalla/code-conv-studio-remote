@@ -59,7 +59,8 @@
       "Bash(./start.sh:*)",
       "Bash(sudo systemctl status:*)",
       "Bash(sed:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(awk:*)"
     ],
     "deny": []
   }

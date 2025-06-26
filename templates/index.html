@@ -188,12 +188,6 @@
                             </button>
                         </div>
                         <div class="toolbar-group">
-                            <button id="selectInputBtn" class="btn btn-ghost btn-sm" onclick="openFolderBrowser()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                                </svg>
-                                Select Input Folder
-                            </button>
                             <button id="uploadBtn" class="btn btn-ghost btn-sm" onclick="openUploadModal()">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -292,45 +286,6 @@
         </main>
     </div>
 
-    <!-- Folder Browser Modal -->
-    <div id="folderBrowserModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Select Input Folder from Data Directory</h3>
-                <button class="btn btn-ghost btn-icon" onclick="closeFolderBrowser()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="current-path">
-                    <span class="path-label">Current Path:</span>
-                    <span id="currentPath" class="path-value">/</span>
-                </div>
-                <div class="folder-list" id="folderList">
-                    <div class="loading-folders">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        <p>Loading folders...</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div class="selected-folder">
-                    <span class="selected-label">Selected:</span>
-                    <span id="selectedFolder" class="selected-value">None</span>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="closeFolderBrowser()">Cancel</button>
-                    <button id="confirmFolderBtn" class="btn btn-primary btn-sm" onclick="confirmFolderSelection()" disabled>
-                        Select Folder
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Upload Modal -->
     <div id="uploadModal" class="modal-overlay" style="display: none;">
