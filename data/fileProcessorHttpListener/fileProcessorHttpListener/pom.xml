@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>fileProcessorScheduler</artifactId>
+	<artifactId>fileProcessorHttpListener</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>fileProcessorScheduler</name>
+	<name>fileProcessorHttpListener</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
 	<licenses>

@@ -1518,23 +1518,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Folder Browser Functionality
-let currentBrowserPath = null;
-let selectedFolderPath = null;
 
-function openFolderBrowser() {
-    const modal = document.getElementById('folderBrowserModal');
-    modal.style.display = 'flex';
-
-    // Start browsing from current working directory
-    browseFolders();
-}
-
-function closeFolderBrowser() {
-    const modal = document.getElementById('folderBrowserModal');
-    modal.style.display = 'none';
-    currentBrowserPath = null;
-    selectedFolderPath = null;
-}
 
 function browseFolders(path = null) {
     const folderList = document.getElementById('folderList');
@@ -1681,12 +1665,6 @@ function renderFolderList(items) {
     });
 }
 
-function confirmFolderSelection() {
-    if (selectedFolderPath) {
-        selectFolderForInput(selectedFolderPath);
-    }
-}
-
 // updateInputStatus function removed - status indicators no longer exist
 
 function formatFileSize(bytes) {
@@ -1697,77 +1675,6 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-function selectFolderForInput(folderPath) {
-    // Show progress in modal and disable confirm button
-    const confirmBtn = document.getElementById('confirmFolderBtn');
-    const selectedFolderElement = document.getElementById('selectedFolder');
-    
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML = `
-        <div class="spinner"></div>
-        Copying...
-    `;
-    selectedFolderElement.textContent = 'Copying files...';
-    
-    // Add log entry about starting the copy process
-    addLogEntry(`Starting folder copy from: ${folderPath}`, 'init');
-    updateGlobalStatus('Copying folder contents...', 'active');
-
-    fetch('/api/input/select', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ path: folderPath })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Update the query input to reflect the new path (use service's input folder)
-            const queryInput = document.getElementById('query');
-            const currentQuery = queryInput.value;
-            const newQuery = currentQuery.replace(/in\s+[^\s]+/, `in ./input`);
-            queryInput.value = newQuery;
-
-            // Update input folder info in the left panel
-            if (currentExplorerTab === 'input') {
-                updateInputFolderInfo();
-            }
-
-            // Refresh file tree to show files from new input folder
-            // Add a small delay to ensure backend has updated
-            setTimeout(() => {
-                refreshFileTree();
-            }, 500);
-
-            // Close the modal
-            closeFolderBrowser();
-
-            // Show detailed success message
-            const message = `Input folder updated! Copied ${data.files_copied} files (${formatFileSize(data.total_size)}) from ${data.source_path}`;
-            addLogEntry(message, 'success');
-            updateGlobalStatus('Input folder updated', 'success');
-        } else {
-            addLogEntry(`Error setting input folder: ${data.message}`, 'error');
-            updateGlobalStatus('Error copying folder', 'error');
-            
-            // Reset modal state
-            confirmBtn.disabled = false;
-            confirmBtn.innerHTML = 'Select Folder';
-            selectedFolderElement.textContent = folderPath;
-        }
-    })
-    .catch(error => {
-        console.error('Error selecting input folder:', error);
-        addLogEntry('Error selecting input folder', 'error');
-        updateGlobalStatus('Error', 'error');
-        
-        // Reset modal state
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = 'Select Folder';
-        selectedFolderElement.textContent = folderPath;
-    });
-}
 
 // Rules, Issues, and Core Prompt Functions
 async function viewRules() {
@@ -2243,7 +2150,6 @@ async function deleteItem(itemPath, itemType) {
 // Global functions
 window.startProcess = startProcess;
 window.closeTab = closeTab;
-window.openFolderBrowser = openFolderBrowser;
 window.viewRules = viewRules;
 window.viewIssues = viewIssues;
 window.viewCorePrompt = viewCorePrompt;
@@ -2255,8 +2161,6 @@ window.viewContext = viewContext;
 window.saveContext = saveContext;
 window.closeContextModal = closeContextModal;
 window.deleteItem = deleteItem;
-window.closeFolderBrowser = closeFolderBrowser;
-window.confirmFolderSelection = confirmFolderSelection;
 
 // Authentication Status Function
 async function checkAuthStatus() {
@@ -2850,15 +2754,20 @@ function displayProjectsList(projects) {
         </button>
     `;
     
-    // Create projects grid
-    let html = '<div class="projects-grid">';
+    // Create projects header and grid
+    let html = `
+        <div class="projects-header">
+            <h2>Your Projects</h2>
+            <p class="projects-subtitle">Select a project to view its files or use it as input for conversion</p>
+        </div>
+        <div class="projects-grid">`;
     
     projects.forEach(project => {
         const modDate = new Date(project.modified);
         const formattedDate = modDate.toLocaleDateString() + ' ' + modDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
         html += `
-            <div class="project-card" onclick="selectProject('${project.name}')">
+            <div class="project-card" onclick="selectProject('${project.name.replace(/'/g, "\\'")}')" data-project-name="${project.name.replace(/"/g, '&quot;')}">
                 <div class="project-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
@@ -2869,12 +2778,12 @@ function displayProjectsList(projects) {
                     <p class="project-meta">${project.fileCount} files • ${formattedDate}</p>
                 </div>
                 <div class="project-actions">
-                    <button class="btn btn-ghost btn-icon" onclick="event.stopPropagation(); useProjectAsInput('${project.name}')" title="Use as input">
+                    <button class="btn btn-ghost btn-icon use-input-btn" onclick="event.stopPropagation(); useProjectAsInput('${project.name.replace(/'/g, "\\'")}')" title="Use as input">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                         </svg>
                     </button>
-                    <button class="btn btn-ghost btn-icon delete-btn" onclick="event.stopPropagation(); deleteProject('${project.name}')" title="Delete project">
+                    <button class="btn btn-ghost btn-icon delete-btn" onclick="event.stopPropagation(); deleteProject('${project.name.replace(/'/g, "\\'")}')" title="Delete project">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -2972,10 +2881,24 @@ function useProjectAsInput(projectName) {
 // Delete project function
 function deleteProject(projectName) {
     if (confirm(`Are you sure you want to delete the project "${projectName}"? This action cannot be undone.`)) {
+        // Show loading state
+        const projectCards = document.querySelectorAll('.project-card');
+        projectCards.forEach(card => {
+            if (card.getAttribute('data-project-name') === projectName) {
+                card.style.opacity = '0.5';
+                card.style.pointerEvents = 'none';
+            }
+        });
+        
         fetch(`/api/projects/${encodeURIComponent(projectName)}`, {
             method: 'DELETE'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 showMessage(`Project "${projectName}" deleted successfully`, 'success');
@@ -2983,11 +2906,26 @@ function deleteProject(projectName) {
                 showProjectsList();
             } else {
                 showMessage(data.error || 'Failed to delete project', 'error');
+                // Restore the card state
+                projectCards.forEach(card => {
+                    if (card.getAttribute('data-project-name') === projectName) {
+                        card.style.opacity = '1';
+                        card.style.pointerEvents = 'auto';
+                    }
+                });
             }
         })
         .catch(error => {
             console.error('Error deleting project:', error);
-            showMessage('Error deleting project', 'error');
+            showMessage(`Error deleting project: ${error.message}`, 'error');
+            // Restore the card state
+            const projectCards = document.querySelectorAll('.project-card');
+            projectCards.forEach(card => {
+                if (card.getAttribute('data-project-name') === projectName) {
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
+                }
+            });
         });
     }
 }

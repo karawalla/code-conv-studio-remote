@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.Messaging.JmsProducer;
-import com.example.demo.Util.FileUtils;
+
 
 @Service
 public class FileProcessingService {
@@ -34,17 +34,6 @@ public class FileProcessingService {
 			
 			jmsProducer.sendStatusMessage(file.getName(), result ? "Processed Successfully" : "Processing Failed");
 			
-			//Move to archive folder
-//			if(result) {
-//				FileUtils.moveToArchive(file, "C:/Users/Pradeep/Desktop/Repo/Spring File Operation/Archive");
-//			}
-			
-			//Copy to archive folder and change the name of source files.
-			if (result) {
-	            FileUtils.copyToArchive(file, "C:/Users/Pradeep/Desktop/Repo/Spring File Operation/Archive");
-	            FileUtils.markFileAsProcessed(file);
-	        }
-
 			return result;
 		}
 		catch(Exception e) {

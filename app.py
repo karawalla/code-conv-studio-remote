@@ -1532,21 +1532,27 @@ def delete_project(project_name):
     try:
         import shutil
         
-        # Secure the project name
-        safe_project_name = secure_filename(project_name)
-        project_path = os.path.join(Config.DATA_FOLDER, safe_project_name)
+        # First try to find the project with the exact name
+        project_path = os.path.join(Config.DATA_FOLDER, project_name)
+        
+        # If not found, try with secure_filename
+        if not os.path.exists(project_path):
+            safe_project_name = secure_filename(project_name)
+            project_path = os.path.join(Config.DATA_FOLDER, safe_project_name)
         
         # Check if project exists
         if not os.path.exists(project_path):
-            return jsonify({'error': 'Project not found'}), 404
+            logger.error(f"Project not found: {project_name}")
+            return jsonify({'error': f'Project "{project_name}" not found'}), 404
         
         # Don't allow deletion of system folders
-        if safe_project_name in ['rules', 'issues', 'uploads']:
+        base_name = os.path.basename(project_path)
+        if base_name in ['rules', 'issues', 'uploads']:
             return jsonify({'error': 'Cannot delete system folders'}), 403
         
         # Delete the project folder
         shutil.rmtree(project_path)
-        logger.info(f"Deleted project: {project_name}")
+        logger.info(f"Deleted project: {project_name} at path: {project_path}")
         
         return jsonify({
             'success': True,
@@ -1554,8 +1560,8 @@ def delete_project(project_name):
         })
         
     except Exception as e:
-        logger.error(f"Error deleting project: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error deleting project {project_name}: {e}")
+        return jsonify({'error': f'Failed to delete project: {str(e)}'}), 500
 
 # Application Entry Point
 if __name__ == '__main__':
