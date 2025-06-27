@@ -15,9 +15,13 @@ COPY app.py .
 COPY services services/
 COPY templates templates/
 COPY static static/
+COPY init_targets.py .
 
 # Create data directories
 RUN mkdir -p data/sources
+
+# Copy targets metadata if it exists
+COPY data/targets_metadata.json data/targets_metadata.json
 
 # Expose port
 EXPOSE 5000

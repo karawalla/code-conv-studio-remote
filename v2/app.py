@@ -18,7 +18,7 @@ class Config:
     HOST = '0.0.0.0'
     PORT = 5000
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-    DATA_FOLDER = os.path.join(os.getcwd(), 'v2', 'data')
+    DATA_FOLDER = os.path.join(os.getcwd(), 'data')
     UPLOAD_FOLDER = os.path.join(DATA_FOLDER, 'uploads')
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max upload
     
@@ -270,37 +270,90 @@ def get_source_file(source_id):
 @app.route('/api/targets')
 def get_targets():
     """Get configured targets"""
-    # Mock data
-    targets = [
-        {
-            'id': 'sage-it',
-            'name': 'Sage IT',
-            'description': 'Sage IT Framework with JMS and microservices',
-            'icon': '🎯',
-            'active': True,
-            'features': ['JMS Integration', 'Microservices', 'Event Driven'],
-            'requirements': ['Java 11+', 'ActiveMQ', 'Spring Boot']
-        },
-        {
-            'id': 'aws-lambda',
-            'name': 'AWS Lambda',
-            'description': 'Serverless functions on AWS',
-            'icon': '☁️',
-            'active': True,
-            'features': ['Serverless', 'Auto-scaling', 'Pay per use'],
-            'requirements': ['AWS Account', 'Node.js/Python/Java']
-        },
-        {
-            'id': 'kubernetes',
-            'name': 'Kubernetes',
-            'description': 'Container orchestration platform',
-            'icon': '☸️',
-            'active': False,
-            'features': ['Container Orchestration', 'Auto-scaling', 'Service Mesh'],
-            'requirements': ['Docker', 'Kubernetes Cluster']
-        }
-    ]
-    return jsonify(targets)
+    try:
+        # Import targets service with data folder
+        from services.targets_service import TargetsService
+        targets_service = TargetsService(Config.DATA_FOLDER)
+        
+        targets = targets_service.get_all_targets()
+        return jsonify(targets)
+    except Exception as e:
+        logger.error(f"Error getting targets: {e}")
+        # Fallback to some default targets if service fails
+        return jsonify([])
+
+@app.route('/api/targets/defaults')
+def get_default_targets():
+    """Get default target templates"""
+    try:
+        from services.targets_service import TargetsService
+        targets_service = TargetsService(Config.DATA_FOLDER)
+        return jsonify(targets_service.get_default_targets())
+    except Exception as e:
+        logger.error(f"Error getting default targets: {e}")
+        return jsonify([])
+
+@app.route('/api/targets/<target_id>')
+def get_target(target_id):
+    """Get a specific target by ID"""
+    try:
+        from services.targets_service import TargetsService
+        targets_service = TargetsService(Config.DATA_FOLDER)
+        target = targets_service.get_target(target_id)
+        if target:
+            return jsonify(target)
+        else:
+            return jsonify({'error': 'Target not found'}), 404
+    except Exception as e:
+        logger.error(f"Error getting target: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/targets', methods=['POST'])
+def create_target():
+    """Create a new target"""
+    try:
+        from services.targets_service import TargetsService
+        targets_service = TargetsService(Config.DATA_FOLDER)
+        data = request.get_json()
+        result = targets_service.create_target(data)
+        return jsonify(result), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating target: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/targets/<target_id>', methods=['PUT'])
+def update_target(target_id):
+    """Update an existing target"""
+    try:
+        from services.targets_service import TargetsService
+        targets_service = TargetsService(Config.DATA_FOLDER)
+        data = request.get_json()
+        result = targets_service.update_target(target_id, data)
+        if result:
+            return jsonify(result)
+        else:
+            return jsonify({'error': 'Target not found'}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error updating target: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/targets/<target_id>', methods=['DELETE'])
+def delete_target(target_id):
+    """Delete a target"""
+    try:
+        from services.targets_service import TargetsService
+        targets_service = TargetsService(Config.DATA_FOLDER)
+        if targets_service.delete_target(target_id):
+            return jsonify({'message': 'Target deleted successfully'})
+        else:
+            return jsonify({'error': 'Target not found'}), 404
+    except Exception as e:
+        logger.error(f"Error deleting target: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/jobs')
 def get_jobs():
