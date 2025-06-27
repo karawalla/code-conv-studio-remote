@@ -172,28 +172,73 @@ async function loadSources() {
         const response = await fetch('/api/sources');
         const sources = await response.json();
         
-        const container = document.getElementById('sourcesGrid');
-        container.innerHTML = '';
+        const tbody = document.getElementById('sourcesTableBody');
+        const emptyState = document.getElementById('noSourcesMessage');
+        const table = document.querySelector('.sources-table');
         
-        sources.forEach(source => {
-            const card = document.createElement('div');
-            card.className = 'source-card';
-            card.innerHTML = `
-                <div class="card-icon">${source.icon}</div>
-                <h4 class="card-title">${source.name}</h4>
-                <p class="card-description">${source.description}</p>
-                <div class="card-tags">
-                    ${source.frameworks.map(f => `<span class="tag">${f}</span>`).join('')}
-                </div>
-                <div class="card-status">
-                    <span class="status-indicator ${source.active ? 'active' : 'inactive'}"></span>
-                    <span>${source.active ? 'Active' : 'Inactive'}</span>
-                </div>
-            `;
-            container.appendChild(card);
-        });
+        tbody.innerHTML = '';
+        
+        if (sources.length === 0) {
+            table.style.display = 'none';
+            emptyState.style.display = 'block';
+        } else {
+            table.style.display = 'table';
+            emptyState.style.display = 'none';
+            
+            sources.forEach(source => {
+                const row = document.createElement('tr');
+                const createdDate = new Date(source.created_at).toLocaleDateString();
+                const fileCount = source.info?.total_files || 0;
+                
+                row.innerHTML = `
+                    <td>
+                        <div class="source-name">
+                            ${source.icon} ${source.name}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="source-type-badge ${source.type} liquid-glass">
+                            ${source.type === 'github' ? '🐙' : '📁'} ${source.type}
+                        </span>
+                    </td>
+                    <td>
+                        ${source.type === 'github' ? 
+                            `<a href="${source.url}" target="_blank" class="text-link">${source.url}</a>` : 
+                            'Local Folder'}
+                    </td>
+                    <td>${fileCount} files</td>
+                    <td>${createdDate}</td>
+                    <td>
+                        <div class="source-actions">
+                            <button class="btn btn-sm btn-secondary liquid-glass" onclick="viewSourceTree('${source.id}', '${source.name}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                </svg>
+                                View Tree
+                            </button>
+                            ${source.type === 'github' ? `
+                                <button class="btn btn-sm btn-secondary liquid-glass" onclick="updateSource('${source.id}')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    Update
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-sm btn-danger" onclick="deleteSource('${source.id}', '${source.name}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
     } catch (error) {
         console.error('Error loading sources:', error);
+        showNotification('Error loading sources', 'error');
     }
 }
 
@@ -321,8 +366,414 @@ function viewJob(jobId) {
     // TODO: Implement job details view
 }
 
+// Add Source Functions
+function showAddSourceModal() {
+    document.getElementById('addSourceModal').classList.add('show');
+}
+
+function toggleSourceTypeFields() {
+    const sourceType = document.querySelector('input[name="sourceType"]:checked').value;
+    const githubFields = document.getElementById('githubFields');
+    const localFields = document.getElementById('localFields');
+    
+    if (sourceType === 'github') {
+        githubFields.style.display = 'block';
+        localFields.style.display = 'none';
+    } else {
+        githubFields.style.display = 'none';
+        localFields.style.display = 'block';
+    }
+}
+
+async function addSource() {
+    const sourceType = document.querySelector('input[name="sourceType"]:checked').value;
+    const sourceName = document.getElementById('sourceName').value.trim();
+    const btnText = document.getElementById('addSourceBtnText');
+    const spinner = document.getElementById('addSourceSpinner');
+    
+    let data = {
+        type: sourceType,
+        name: sourceName
+    };
+    
+    if (sourceType === 'github') {
+        const repoUrl = document.getElementById('repoUrl').value.trim();
+        if (!repoUrl) {
+            showNotification('Please enter a repository URL', 'error');
+            return;
+        }
+        data.url = repoUrl;
+    } else {
+        const folderPath = document.getElementById('folderPath').value.trim();
+        if (!folderPath) {
+            showNotification('Please enter a folder path', 'error');
+            return;
+        }
+        data.path = folderPath;
+    }
+    
+    // Show loading state
+    btnText.style.display = 'none';
+    spinner.style.display = 'inline-block';
+    
+    try {
+        const response = await fetch('/api/sources', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Source added successfully', 'success');
+            closeModal('addSourceModal');
+            loadSources(); // Reload the sources list
+            
+            // Clear form
+            document.getElementById('sourceName').value = '';
+            document.getElementById('repoUrl').value = '';
+            document.getElementById('folderPath').value = '';
+        } else {
+            showNotification(result.error || 'Failed to add source', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding source:', error);
+        showNotification('Failed to add source', 'error');
+    } finally {
+        // Hide loading state
+        btnText.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+async function deleteSource(sourceId, sourceName) {
+    if (!confirm(`Are you sure you want to delete "${sourceName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/sources/${sourceId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Source deleted successfully', 'success');
+            loadSources(); // Reload the sources list
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to delete source', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting source:', error);
+        showNotification('Failed to delete source', 'error');
+    }
+}
+
+async function updateSource(sourceId) {
+    try {
+        const response = await fetch(`/api/sources/${sourceId}/update`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showNotification('Source updated successfully', 'success');
+            loadSources(); // Reload the sources list
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to update source', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating source:', error);
+        showNotification('Failed to update source', 'error');
+    }
+}
+
+// Tree view state
+let treeState = {
+    sourceId: null,
+    sourceName: null,
+    currentPath: [],
+    fullTree: null
+};
+
+async function viewSourceTree(sourceId, sourceName) {
+    const modal = document.getElementById('sourceTreeModal');
+    const title = document.getElementById('sourceTreeTitle');
+    const content = document.getElementById('sourceTreeContent');
+    
+    // Reset state
+    treeState = {
+        sourceId: sourceId,
+        sourceName: sourceName,
+        currentPath: [],
+        fullTree: null
+    };
+    
+    title.textContent = `Source Tree - ${sourceName}`;
+    content.innerHTML = '<div class="spinner"></div> Loading...';
+    
+    modal.classList.add('show');
+    
+    try {
+        const response = await fetch(`/api/sources/${sourceId}/tree`);
+        const tree = await response.json();
+        
+        treeState.fullTree = tree;
+        navigateToPath([]);
+    } catch (error) {
+        console.error('Error loading source tree:', error);
+        content.innerHTML = '<p>Failed to load source tree</p>';
+    }
+}
+
+function navigateToPath(path) {
+    treeState.currentPath = path;
+    
+    // Update navigation breadcrumb
+    updateTreeNavigation();
+    
+    // Get items at current path
+    let currentItems = treeState.fullTree;
+    for (const segment of path) {
+        const folder = currentItems.find(item => item.name === segment && item.type === 'folder');
+        if (folder && folder.children) {
+            currentItems = folder.children;
+        }
+    }
+    
+    // Render current level
+    renderTreeLevel(currentItems);
+}
+
+function updateTreeNavigation() {
+    const nav = document.getElementById('treeNavigation');
+    nav.innerHTML = '';
+    
+    // Root item
+    const rootItem = document.createElement('div');
+    rootItem.className = 'tree-nav-item liquid-glass';
+    rootItem.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        ${treeState.sourceName}
+    `;
+    rootItem.onclick = () => navigateToPath([]);
+    nav.appendChild(rootItem);
+    
+    // Path segments
+    treeState.currentPath.forEach((segment, index) => {
+        // Separator
+        const separator = document.createElement('span');
+        separator.className = 'tree-nav-separator';
+        separator.textContent = '›';
+        nav.appendChild(separator);
+        
+        // Path item
+        const pathItem = document.createElement('div');
+        pathItem.className = 'tree-nav-item liquid-glass';
+        pathItem.textContent = segment;
+        pathItem.onclick = () => navigateToPath(treeState.currentPath.slice(0, index + 1));
+        nav.appendChild(pathItem);
+    });
+}
+
+function renderTreeLevel(items) {
+    const content = document.getElementById('sourceTreeContent');
+    content.innerHTML = '';
+    
+    // Sort items: folders first, then files
+    const sortedItems = [...items].sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'folder' ? -1 : 1;
+    });
+    
+    sortedItems.forEach(item => {
+        const itemElement = document.createElement('div');
+        itemElement.className = `tree-item tree-${item.type}`;
+        
+        if (item.type === 'file') {
+            const ext = item.name.split('.').pop().toLowerCase();
+            itemElement.classList.add(`file-${ext}`);
+        }
+        
+        const icon = document.createElement('span');
+        icon.className = 'tree-icon';
+        icon.innerHTML = item.type === 'folder' ? 
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>' :
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+        
+        const label = document.createElement('span');
+        label.className = 'tree-label';
+        label.textContent = item.name;
+        
+        if (item.type === 'file' && item.size) {
+            const info = document.createElement('span');
+            info.className = 'tree-info';
+            info.textContent = formatFileSize(item.size);
+            label.appendChild(info);
+        }
+        
+        itemElement.appendChild(icon);
+        itemElement.appendChild(label);
+        
+        if (item.type === 'folder') {
+            itemElement.onclick = () => {
+                const newPath = [...treeState.currentPath, item.name];
+                navigateToPath(newPath);
+            };
+        } else {
+            // File click handler
+            itemElement.onclick = () => {
+                selectFile(item.name);
+            };
+        }
+        
+        content.appendChild(itemElement);
+    });
+    
+    // If empty folder
+    if (items.length === 0) {
+        content.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--gray-500);">Empty folder</div>';
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function showNotification(message, type = 'info') {
+    // Simple notification (you can enhance this with a proper notification system)
+    console.log(`${type}: ${message}`);
+    // TODO: Implement visual notification
+}
+
+// Add CSS classes
+const style = document.createElement('style');
+style.textContent = `
+    .text-link {
+        color: var(--primary);
+        text-decoration: none;
+    }
+    .text-link:hover {
+        text-decoration: underline;
+    }
+    .btn-danger {
+        background: var(--danger);
+        color: var(--white);
+    }
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+`;
+document.head.appendChild(style);
+
 // Export functions for global use
 window.navigateToPage = navigateToPage;
 window.showNewJobModal = showNewJobModal;
 window.closeModal = closeModal;
 window.viewJob = viewJob;
+window.showAddSourceModal = showAddSourceModal;
+window.toggleSourceTypeFields = toggleSourceTypeFields;
+window.addSource = addSource;
+window.deleteSource = deleteSource;
+window.updateSource = updateSource;
+window.viewSourceTree = viewSourceTree;
+
+// File selection and content display
+let selectedFile = null;
+
+async function selectFile(filename) {
+    // Update selected state
+    document.querySelectorAll('.tree-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Find and select the clicked item
+    const items = document.querySelectorAll('.tree-item');
+    items.forEach(item => {
+        if (item.querySelector('.tree-label').textContent.includes(filename)) {
+            item.classList.add('selected');
+        }
+    });
+    
+    // Build full path
+    const fullPath = [...treeState.currentPath, filename].join('/');
+    selectedFile = fullPath;
+    
+    // Update content header
+    document.getElementById('contentHeader').querySelector('.content-filename').textContent = fullPath || filename;
+    
+    // Show loading state
+    const contentBody = document.getElementById('contentBody');
+    contentBody.innerHTML = '<div class="spinner" style="margin: 2rem auto; display: block;"></div> Loading file content...';
+    
+    try {
+        // Fetch file content
+        const response = await fetch(`/api/sources/${treeState.sourceId}/file?path=${encodeURIComponent(fullPath)}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayFileContent(data.content, filename);
+        } else {
+            contentBody.innerHTML = `
+                <div class="content-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p>Unable to load file content</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading file:', error);
+        contentBody.innerHTML = `
+            <div class="content-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p>Error loading file content</p>
+            </div>
+        `;
+    }
+}
+
+function displayFileContent(content, filename) {
+    const contentBody = document.getElementById('contentBody');
+    const fileContent = document.getElementById('fileContent');
+    
+    // Hide placeholder, show content
+    contentBody.innerHTML = '';
+    const pre = document.createElement('pre');
+    pre.id = 'fileContent';
+    pre.className = 'file-content';
+    
+    // Check if it's a binary file or image
+    const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'bmp', 'webp'];
+    const ext = filename.split('.').pop().toLowerCase();
+    
+    if (imageExtensions.includes(ext)) {
+        // Display image
+        pre.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <img src="data:image/${ext};base64,${content}" style="max-width: 100%; max-height: 600px; border: 1px solid var(--gray-200); border-radius: var(--radius);" />
+            </div>
+        `;
+    } else if (content === null || content === undefined) {
+        pre.textContent = '// Binary file - content preview not available';
+    } else {
+        // Display text content with syntax highlighting (basic)
+        pre.textContent = content || '// Empty file';
+    }
+    
+    contentBody.appendChild(pre);
+}
+
+// Selected styles are now handled in dashboard.css

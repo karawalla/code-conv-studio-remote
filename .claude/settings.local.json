@@ -60,7 +60,14 @@
       "Bash(sudo systemctl status:*)",
       "Bash(sed:*)",
       "Bash(node:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(./docker-start.sh:*)",
+      "Bash(docker-compose:*)",
+      "Bash(python:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }
