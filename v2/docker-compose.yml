@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  conversion-studio:
+    build: .
+    container_name: any-to-any-conversion-studio
+    ports:
+      - "8080:5000"
+    environment:
+      - FLASK_ENV=development
+      - DEBUG=True
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
