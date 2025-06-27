@@ -1,0 +1,140 @@
+{
+  "targets": {
+    "24d90d72-023b-4c0a-b4e3-0c939aa676b7": {
+      "id": "24d90d72-023b-4c0a-b4e3-0c939aa676b7",
+      "name": "Python",
+      "description": "Python frameworks and libraries including Django, FastAPI, Flask, SQLAlchemy, Celery",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.214480",
+      "updated_at": "2025-06-27T01:20:08.214484",
+      "prompts": {
+        "analyze": "Analyze the Python source code architecture, identify frameworks (Django, FastAPI, Flask), patterns, dependencies, and project structure.",
+        "plan": "Create a detailed migration plan to convert from the source framework to Python Python, including steps, timeline, dependency mapping, and potential challenges.",
+        "migrate": "Convert the following code from the source framework to Python Python, maintaining functionality while following Python best practices and Python conventions.",
+        "validate": "Validate the migrated Python code for correctness, performance, PEP 8 compliance, and adherence to Python conventions. Identify any issues or improvements.",
+        "fix": "Fix the identified issues in the migrated Python code and ensure it follows Python best practices, proper error handling, and Pythonic patterns.",
+        "discuss": "Discuss the migration approach to Python Python, trade-offs between different Python frameworks, and alternative solutions for complex scenarios."
+      },
+      "knowledge_store": []
+    },
+    "8dabc542-4e67-4ebd-be44-52d716d7495e": {
+      "id": "8dabc542-4e67-4ebd-be44-52d716d7495e",
+      "name": "Java",
+      "description": "Java frameworks including Spring Boot, Spring MVC, Jakarta EE, Micronaut, Quarkus",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.214600",
+      "updated_at": "2025-06-27T01:20:08.214602",
+      "prompts": {
+        "analyze": "Analyze the Java source code architecture, identify frameworks (Spring Boot, Spring MVC, Jakarta EE), design patterns, dependencies, and build configuration.",
+        "plan": "Create a detailed migration plan to convert from the source framework to Java Java, including dependency migration, configuration changes, and testing strategy.",
+        "migrate": "Convert the following code from the source framework to Java Java, maintaining functionality while following Java best practices and Java conventions.",
+        "validate": "Validate the migrated Java code for correctness, performance, thread safety, and adherence to Java conventions. Check for proper exception handling and resource management.",
+        "fix": "Fix the identified issues in the migrated Java code and ensure it follows Java best practices, SOLID principles, and proper Java patterns.",
+        "discuss": "Discuss the migration approach to Java Java, considerations for microservices architecture, dependency injection patterns, and performance optimization strategies."
+      },
+      "knowledge_store": []
+    },
+    "093d2aa9-b4e6-48c5-9082-6eb012a07cb1": {
+      "id": "093d2aa9-b4e6-48c5-9082-6eb012a07cb1",
+      "name": "JavaScript",
+      "description": "JavaScript/TypeScript frameworks including React, Vue, Angular, Node.js, Express, Next.js",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.214710",
+      "updated_at": "2025-06-27T01:20:08.214712",
+      "prompts": {
+        "analyze": "Analyze the JavaScript/TypeScript source code, identify frameworks (React, Vue, Angular, Express, Next.js), state management, and architectural patterns.",
+        "plan": "Create a migration plan to convert from the source framework to JavaScript, including component structure, state management migration, and build tool configuration.",
+        "migrate": "Convert the following code to JavaScript, maintaining functionality while following modern JavaScript/TypeScript best practices and JavaScript conventions.",
+        "validate": "Validate the migrated code for correctness, performance, accessibility, and adherence to JavaScript best practices. Check for proper typing if using TypeScript.",
+        "fix": "Fix issues in the migrated code and ensure it follows JavaScript best practices, proper component lifecycle, and modern JavaScript patterns.",
+        "discuss": "Discuss the migration approach to JavaScript, state management options, SSR vs CSR considerations, and bundling optimization strategies."
+      },
+      "knowledge_store": []
+    },
+    "be5f138a-e35d-4a1c-aeb9-5e2bb928b4e1": {
+      "id": "be5f138a-e35d-4a1c-aeb9-5e2bb928b4e1",
+      "name": "C#/.NET",
+      "description": "C#/.NET frameworks including ASP.NET Core, Blazor, WPF, MAUI, Entity Framework, SignalR",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.214871",
+      "updated_at": "2025-06-27T01:20:08.214872",
+      "prompts": {
+        "analyze": "Analyze the C#/.NET source code architecture, identify frameworks (ASP.NET Core, Blazor, WPF, MAUI), design patterns, NuGet packages, and solution structure.",
+        "plan": "Create a detailed migration plan to convert from the source framework to C#/.NET C#/.NET, including package migration, dependency injection setup, and testing approach.",
+        "migrate": "Convert the following code from the source framework to C#/.NET C#/.NET, maintaining functionality while following C# best practices and C#/.NET conventions.",
+        "validate": "Validate the migrated C# code for correctness, performance, async/await patterns, and adherence to .NET conventions. Check for proper null handling and LINQ optimizations.",
+        "fix": "Fix the identified issues in the migrated C# code and ensure it follows .NET best practices, async patterns, proper exception handling, and SOLID principles.",
+        "discuss": "Discuss the migration approach to C#/.NET C#/.NET, microservices vs monolith considerations, Azure integration options, and performance optimization strategies."
+      },
+      "knowledge_store": []
+    },
+    "3ffee63c-089f-4ae3-ae4e-815009f7a746": {
+      "id": "3ffee63c-089f-4ae3-ae4e-815009f7a746",
+      "name": "Ruby",
+      "description": "Ruby frameworks including Ruby on Rails, Sinatra, Hanami, Roda, Grape API",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.215038",
+      "updated_at": "2025-06-27T01:20:08.215039",
+      "prompts": {
+        "analyze": "Analyze the Ruby source code architecture, identify frameworks (Rails, Sinatra, Hanami), gems, database patterns, and project structure.",
+        "plan": "Create a detailed migration plan to convert from the source framework to Ruby Ruby, including gem migration, database setup, and testing framework selection.",
+        "migrate": "Convert the following code from the source framework to Ruby Ruby, maintaining functionality while following Ruby conventions and Ruby patterns.",
+        "validate": "Validate the migrated Ruby code for correctness, performance, proper use of blocks/procs, and adherence to Ruby style guide. Check for N+1 queries and security issues.",
+        "fix": "Fix the identified issues in the migrated Ruby code and ensure it follows Ruby best practices, proper metaprogramming patterns, and idiomatic Ruby conventions.",
+        "discuss": "Discuss the migration approach to Ruby Ruby, API vs full-stack considerations, background job processing options, and caching strategies."
+      },
+      "knowledge_store": []
+    },
+    "226dd4e0-ba44-4f7e-9f44-3b6a657c9759": {
+      "id": "226dd4e0-ba44-4f7e-9f44-3b6a657c9759",
+      "name": "PHP",
+      "description": "PHP frameworks including Laravel, Symfony, Slim, CodeIgniter, Laminas, Phalcon",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.215239",
+      "updated_at": "2025-06-27T01:20:08.215240",
+      "prompts": {
+        "analyze": "Analyze the PHP source code architecture, identify frameworks (Laravel, Symfony, Slim, CodeIgniter), Composer packages, and application structure.",
+        "plan": "Create a detailed migration plan to convert from the source framework to PHP PHP, including package migration, database abstraction, and PSR standards adoption.",
+        "migrate": "Convert the following code from the source framework to PHP PHP, maintaining functionality while following PSR standards and PHP conventions.",
+        "validate": "Validate the migrated PHP code for correctness, performance, security vulnerabilities, and adherence to PSR standards. Check for SQL injection and XSS issues.",
+        "fix": "Fix the identified issues in the migrated PHP code and ensure it follows PHP best practices, proper type declarations, and modern PHP patterns.",
+        "discuss": "Discuss the migration approach to PHP PHP, traditional vs API-first architecture, caching strategies, and deployment considerations."
+      },
+      "knowledge_store": []
+    },
+    "02d28552-5124-4930-af64-de851992a1bd": {
+      "id": "02d28552-5124-4930-af64-de851992a1bd",
+      "name": "Go",
+      "description": "Go frameworks including Gin, Echo, Fiber, Beego, Chi, and standard library net/http",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.215413",
+      "updated_at": "2025-06-27T01:20:08.215414",
+      "prompts": {
+        "analyze": "Analyze the Go source code architecture, identify frameworks (Gin, Echo, Fiber, Beego), package structure, and concurrency patterns.",
+        "plan": "Create a detailed migration plan to convert from the source framework to Go Go, including module setup, dependency management, and goroutine design.",
+        "migrate": "Convert the following code from the source framework to Go Go, maintaining functionality while following Go idioms and Go patterns.",
+        "validate": "Validate the migrated Go code for correctness, performance, proper error handling, and goroutine safety. Check for race conditions and channel usage.",
+        "fix": "Fix the identified issues in the migrated Go code and ensure it follows Go best practices, proper context usage, and idiomatic Go patterns.",
+        "discuss": "Discuss the migration approach to Go Go, microservices architecture, gRPC vs REST, and deployment strategies for Go applications."
+      },
+      "knowledge_store": []
+    },
+    "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2": {
+      "id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
+      "name": "Rust",
+      "description": "Rust frameworks including Actix-web, Rocket, Axum, Warp, Tide, and async ecosystem",
+      "active": true,
+      "created_at": "2025-06-27T01:20:08.215592",
+      "updated_at": "2025-06-27T01:20:08.215593",
+      "prompts": {
+        "analyze": "Analyze the Rust source code architecture, identify frameworks (Actix-web, Rocket, Axum, Warp), crate dependencies, and ownership patterns.",
+        "plan": "Create a detailed migration plan to convert from the source framework to Rust Rust, including memory safety considerations, async runtime selection, and error handling strategy.",
+        "migrate": "Convert the following code from the source framework to Rust Rust, ensuring memory safety while following Rust patterns and Rust conventions.",
+        "validate": "Validate the migrated Rust code for correctness, memory safety, performance, and adherence to Rust idioms. Check for proper lifetime usage and error handling.",
+        "fix": "Fix the identified issues in the migrated Rust code and ensure it follows Rust best practices, proper trait usage, and idiomatic error handling patterns.",
+        "discuss": "Discuss the migration approach to Rust Rust, async vs sync runtime considerations, zero-cost abstractions, and FFI integration strategies."
+      },
+      "knowledge_store": []
+    }
+  }
+}

@@ -545,12 +545,23 @@ body {
     font-size: 0.875rem;
 }
 
+/* When h3 is hidden, make p text slightly larger */
+.page-header > div:first-child > p:first-child,
+.page-header > div:first-child > p:only-child {
+    font-size: 1rem;
+    color: var(--gray-700);
+}
+
 /* Grids */
 .sources-grid,
 .targets-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.5rem;
+}
+
+.agents-container {
+    margin-top: 2rem;
 }
 
 .source-card,
@@ -808,7 +819,9 @@ body {
     width: 90%;
     max-width: 600px;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Force source tree modal to be full width */
@@ -887,6 +900,9 @@ body {
 
 .modal-body {
     padding: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .modal-footer {
