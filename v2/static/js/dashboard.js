@@ -79,11 +79,13 @@ function updatePageHeader(pageName) {
         'sources': 'Sources',
         'targets': 'Targets',
         'jobs': 'Jobs',
-        'settings': 'Settings'
+        'settings': 'Settings',
+        'agents': 'Agents'
     };
     
-    document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
-    document.querySelector('.breadcrumb').textContent = titles[pageName] || 'Home';
+    // Commented out - redundant page titles removed
+    // document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
+    // document.querySelector('.breadcrumb').textContent = titles[pageName] || 'Home';
 }
 
 // Load Dashboard Data
@@ -249,27 +251,60 @@ async function loadTargets() {
         const targets = await response.json();
         
         const container = document.getElementById('targetsGrid');
+        const emptyState = document.getElementById('noTargetsMessage');
+        
         container.innerHTML = '';
         
-        targets.forEach(target => {
-            const card = document.createElement('div');
-            card.className = 'target-card';
-            card.innerHTML = `
-                <div class="card-icon">${target.icon}</div>
-                <h4 class="card-title">${target.name}</h4>
-                <p class="card-description">${target.description}</p>
-                <div class="card-tags">
-                    ${target.features.map(f => `<span class="tag">${f}</span>`).join('')}
-                </div>
-                <div class="card-status">
-                    <span class="status-indicator ${target.active ? 'active' : 'inactive'}"></span>
-                    <span>${target.active ? 'Active' : 'Inactive'}</span>
-                </div>
-            `;
-            container.appendChild(card);
-        });
+        if (targets.length === 0) {
+            container.style.display = 'none';
+            emptyState.style.display = 'block';
+        } else {
+            container.style.display = 'grid';
+            emptyState.style.display = 'none';
+            
+            targets.forEach(target => {
+                const card = document.createElement('div');
+                card.className = 'target-card liquid-glass';
+                card.innerHTML = `
+                    <div class="target-header">
+                        <div class="target-info">
+                            <div class="target-icon">${getTargetIcon(target.name)}</div>
+                            <h4 class="target-name">${target.name}</h4>
+                            <p class="target-description">${target.description}</p>
+                        </div>
+                        <div class="target-actions">
+                            <button class="btn btn-sm btn-secondary liquid-glass" onclick="editTarget('${target.id}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTarget('${target.id}', '${target.name}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="target-prompts-info">
+                        <div class="prompts-count">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            6 conversion prompts configured
+                        </div>
+                    </div>
+                `;
+                card.onclick = (e) => {
+                    if (!e.target.closest('button')) {
+                        editTarget(target.id);
+                    }
+                };
+                container.appendChild(card);
+            });
+        }
     } catch (error) {
         console.error('Error loading targets:', error);
+        showNotification('Error loading targets', 'error');
     }
 }
 
@@ -686,6 +721,22 @@ window.addSource = addSource;
 window.deleteSource = deleteSource;
 window.updateSource = updateSource;
 window.viewSourceTree = viewSourceTree;
+window.showAddTargetModal = showAddTargetModal;
+window.addTarget = addTarget;
+window.editTarget = editTarget;
+window.deleteTarget = deleteTarget;
+window.switchTab = switchTab;
+window.switchAddTargetTab = switchAddTargetTab;
+window.switchMainTab = switchMainTab;
+window.switchKnowledgeTab = switchKnowledgeTab;
+window.saveTarget = saveTarget;
+window.triggerFileUpload = triggerFileUpload;
+window.handleFileUpload = handleFileUpload;
+window.addSearchTopic = addSearchTopic;
+window.addGithubSample = addGithubSample;
+window.addDocumentationUrl = addDocumentationUrl;
+window.removeKnowledgeItem = removeKnowledgeItem;
+window.removeTopicTag = removeTopicTag;
 
 // File selection and content display
 let selectedFile = null;
@@ -777,3 +828,584 @@ function displayFileContent(content, filename) {
 }
 
 // Selected styles are now handled in dashboard.css
+
+// Target Functions
+function getTargetIcon(targetName) {
+    const icons = {
+        'Python': '🐍',
+        'Java': '☕',
+        'JavaScript': '🟨',
+        'C#/.NET': '🔷',
+        'Ruby': '💎',
+        'PHP': '🐘',
+        'Go': '🐹',
+        'Rust': '🦀'
+    };
+    
+    // Check if the target name contains any of the keys
+    for (const [key, icon] of Object.entries(icons)) {
+        if (targetName.toLowerCase().includes(key.toLowerCase())) {
+            return icon;
+        }
+    }
+    
+    return '🎯'; // Default icon
+}
+
+async function showAddTargetModal() {
+    document.getElementById('addTargetModal').classList.add('show');
+    
+    // Load default targets
+    try {
+        const response = await fetch('/api/targets/defaults');
+        const defaults = await response.json();
+        
+        const container = document.getElementById('defaultTargetsList');
+        container.innerHTML = '';
+        
+        defaults.forEach(target => {
+            const item = document.createElement('div');
+            item.className = 'default-target-item';
+            item.innerHTML = `
+                <div class="default-target-icon">${target.icon}</div>
+                <div class="default-target-name">${target.name}</div>
+            `;
+            item.onclick = () => {
+                document.getElementById('targetName').value = target.name;
+                document.getElementById('targetDescription').value = target.description;
+            };
+            container.appendChild(item);
+        });
+    } catch (error) {
+        console.error('Error loading default targets:', error);
+    }
+}
+
+function switchAddTargetTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('#addTargetModal .tab-button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-tab') === tabName) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Update tab panels
+    document.querySelectorAll('#addTargetModal .tab-panel').forEach(panel => {
+        panel.classList.remove('active');
+    });
+    document.getElementById(tabName + '-panel').classList.add('active');
+}
+
+async function addTarget() {
+    const name = document.getElementById('targetName').value.trim();
+    const description = document.getElementById('targetDescription').value.trim();
+    const btnText = document.getElementById('addTargetBtnText');
+    const spinner = document.getElementById('addTargetSpinner');
+    
+    if (!name) {
+        showNotification('Please enter a target name', 'error');
+        return;
+    }
+    
+    // Collect prompts
+    const prompts = {
+        analyze: document.getElementById('addPromptAnalyze').value.trim(),
+        plan: document.getElementById('addPromptPlan').value.trim(),
+        migrate: document.getElementById('addPromptMigrate').value.trim(),
+        validate: document.getElementById('addPromptValidate').value.trim(),
+        fix: document.getElementById('addPromptFix').value.trim(),
+        discuss: document.getElementById('addPromptDiscuss').value.trim()
+    };
+    
+    // Show loading state
+    btnText.style.display = 'none';
+    spinner.style.display = 'inline-block';
+    
+    try {
+        const response = await fetch('/api/targets', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description,
+                prompts: prompts
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Target created successfully', 'success');
+            closeModal('addTargetModal');
+            loadTargets(); // Reload the targets list
+            
+            // Clear form
+            document.getElementById('targetName').value = '';
+            document.getElementById('targetDescription').value = '';
+            document.getElementById('addPromptAnalyze').value = '';
+            document.getElementById('addPromptPlan').value = '';
+            document.getElementById('addPromptMigrate').value = '';
+            document.getElementById('addPromptValidate').value = '';
+            document.getElementById('addPromptFix').value = '';
+            document.getElementById('addPromptDiscuss').value = '';
+            
+            // Reset to first tab
+            switchAddTargetTab('add-analyze');
+        } else {
+            showNotification(result.error || 'Failed to create target', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating target:', error);
+        showNotification('Failed to create target', 'error');
+    } finally {
+        // Hide loading state
+        btnText.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+let currentEditingTarget = null;
+
+async function editTarget(targetId) {
+    try {
+        const response = await fetch(`/api/targets/${targetId}`);
+        const target = await response.json();
+        
+        if (response.ok) {
+            currentEditingTarget = target;
+            
+            // Update modal title
+            document.getElementById('editTargetTitle').textContent = `Edit Target - ${target.name}`;
+            
+            // Fill in target info
+            document.getElementById('editTargetName').value = target.name;
+            document.getElementById('editTargetDescription').value = target.description;
+            
+            // Fill in prompts
+            document.getElementById('promptAnalyze').value = target.prompts.analyze || '';
+            document.getElementById('promptPlan').value = target.prompts.plan || '';
+            document.getElementById('promptMigrate').value = target.prompts.migrate || '';
+            document.getElementById('promptValidate').value = target.prompts.validate || '';
+            document.getElementById('promptFix').value = target.prompts.fix || '';
+            document.getElementById('promptDiscuss').value = target.prompts.discuss || '';
+            
+            // TODO: Load knowledge store items
+            
+            // Show modal
+            document.getElementById('editTargetModal').classList.add('show');
+            
+            // Reset to first tab
+            switchTab('analyze');
+        } else {
+            showNotification('Target not found', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading target:', error);
+        showNotification('Failed to load target', 'error');
+    }
+}
+
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabName) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Update tab panels
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+        if (panel.getAttribute('data-panel') === tabName) {
+            panel.classList.add('active');
+        } else {
+            panel.classList.remove('active');
+        }
+    });
+}
+
+function switchMainTab(tabName) {
+    // Update main tab buttons
+    document.querySelectorAll('.main-tab-button').forEach(btn => {
+        if (btn.getAttribute('data-main-tab') === tabName) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Update main tab panels
+    document.querySelectorAll('.main-tab-panel').forEach(panel => {
+        if (panel.id === tabName + '-panel') {
+            panel.classList.add('active');
+        } else {
+            panel.classList.remove('active');
+        }
+    });
+}
+
+function switchKnowledgeTab(tabName) {
+    // Update knowledge tab buttons
+    document.querySelectorAll('.knowledge-tab-button').forEach(btn => {
+        if (btn.getAttribute('data-knowledge-tab') === tabName) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Update knowledge tab panels
+    document.querySelectorAll('.knowledge-tab-panel').forEach(panel => {
+        if (panel.getAttribute('data-knowledge-panel') === tabName) {
+            panel.classList.add('active');
+        } else {
+            panel.classList.remove('active');
+        }
+    });
+}
+
+async function saveTarget() {
+    if (!currentEditingTarget) return;
+    
+    const btnText = document.getElementById('saveTargetBtnText');
+    const spinner = document.getElementById('saveTargetSpinner');
+    
+    // Collect data
+    const updates = {
+        name: document.getElementById('editTargetName').value.trim(),
+        description: document.getElementById('editTargetDescription').value.trim(),
+        prompts: {
+            analyze: document.getElementById('promptAnalyze').value.trim(),
+            plan: document.getElementById('promptPlan').value.trim(),
+            migrate: document.getElementById('promptMigrate').value.trim(),
+            validate: document.getElementById('promptValidate').value.trim(),
+            fix: document.getElementById('promptFix').value.trim(),
+            discuss: document.getElementById('promptDiscuss').value.trim()
+        }
+    };
+    
+    // Show loading state
+    btnText.style.display = 'none';
+    spinner.style.display = 'inline-block';
+    
+    try {
+        const response = await fetch(`/api/targets/${currentEditingTarget.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updates)
+        });
+        
+        if (response.ok) {
+            showNotification('Target updated successfully', 'success');
+            closeModal('editTargetModal');
+            loadTargets(); // Reload the targets list
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to update target', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating target:', error);
+        showNotification('Failed to update target', 'error');
+    } finally {
+        // Hide loading state
+        btnText.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+async function deleteTarget(targetId, targetName) {
+    if (!confirm(`Are you sure you want to delete "${targetName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/targets/${targetId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Target deleted successfully', 'success');
+            loadTargets(); // Reload the targets list
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to delete target', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting target:', error);
+        showNotification('Failed to delete target', 'error');
+    }
+}
+
+// Knowledge Store Functions
+function triggerFileUpload() {
+    document.getElementById('knowledgeFileInput').click();
+}
+
+function handleFileUpload(event) {
+    const files = event.target.files;
+    if (files.length === 0) return;
+    
+    // For now, just show the files in the list
+    // In a real implementation, you would upload these to the server
+    const knowledgeList = document.getElementById('knowledgeStoreList');
+    
+    for (let file of files) {
+        const item = createKnowledgeItem({
+            type: 'file',
+            name: file.name,
+            size: formatFileSize(file.size),
+            id: Date.now() + Math.random() // Temporary ID
+        });
+        knowledgeList.appendChild(item);
+    }
+    
+    // Show the knowledge list if it was hidden
+    knowledgeList.style.display = 'flex';
+    
+    showNotification(`Added ${files.length} file(s) to knowledge store`, 'success');
+    event.target.value = ''; // Reset input
+}
+
+function addSearchTopic() {
+    const topicInput = document.getElementById('searchTopicInput');
+    const topic = topicInput.value.trim();
+    
+    if (!topic) {
+        showNotification('Please enter a search topic', 'error');
+        return;
+    }
+    
+    // Get or create the topics container
+    let topicsContainer = document.getElementById('searchTopicsContainer');
+    if (!topicsContainer) {
+        topicsContainer = document.createElement('div');
+        topicsContainer.id = 'searchTopicsContainer';
+        topicsContainer.className = 'topics-container';
+        const panel = document.querySelector('[data-knowledge-panel="search"]');
+        if (panel) {
+            panel.appendChild(topicsContainer);
+        }
+    }
+    
+    // Create a tag instead of a full item
+    const tag = createTopicTag({
+        name: topic,
+        id: Date.now() + Math.random()
+    });
+    
+    topicsContainer.appendChild(tag);
+    topicInput.value = '';
+    showNotification('Search topic added', 'success');
+}
+
+function addGithubSample() {
+    const githubInput = document.getElementById('githubUrlInput');
+    const url = githubInput.value.trim();
+    
+    if (!url) {
+        showNotification('Please enter a GitHub URL', 'error');
+        return;
+    }
+    
+    // Validate GitHub URL
+    try {
+        const urlObj = new URL(url);
+        if (!urlObj.hostname.includes('github.com')) {
+            showNotification('Please enter a valid GitHub URL', 'error');
+            return;
+        }
+    } catch (e) {
+        showNotification('Please enter a valid URL', 'error');
+        return;
+    }
+    
+    const knowledgeList = document.getElementById('knowledgeStoreList');
+    const item = createKnowledgeItem({
+        type: 'github',
+        name: getGithubRepoName(url),
+        url: url,
+        id: Date.now() + Math.random()
+    });
+    
+    knowledgeList.appendChild(item);
+    knowledgeList.style.display = 'flex';
+    githubInput.value = '';
+    showNotification('GitHub sample added', 'success');
+}
+
+function addDocumentationUrl() {
+    const docInput = document.getElementById('docUrlInput');
+    const url = docInput.value.trim();
+    
+    if (!url) {
+        showNotification('Please enter a documentation URL', 'error');
+        return;
+    }
+    
+    // Basic URL validation
+    try {
+        new URL(url);
+    } catch (e) {
+        showNotification('Please enter a valid URL', 'error');
+        return;
+    }
+    
+    const knowledgeList = document.getElementById('knowledgeStoreList');
+    const item = createKnowledgeItem({
+        type: 'doc',
+        name: getDomainFromUrl(url),
+        url: url,
+        id: Date.now() + Math.random()
+    });
+    
+    knowledgeList.appendChild(item);
+    knowledgeList.style.display = 'flex';
+    docInput.value = '';
+    showNotification('Documentation link added', 'success');
+}
+
+function createKnowledgeItem(data) {
+    const item = document.createElement('div');
+    item.className = 'knowledge-item';
+    item.dataset.id = data.id;
+    
+    const icons = {
+        search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>',
+        github: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>',
+        doc: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>',
+        file: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>'
+    };
+    
+    const tagLabels = {
+        search: 'Search',
+        github: 'GitHub',
+        doc: 'Doc',
+        file: 'File'
+    };
+    
+    const icon = icons[data.type] || icons.file;
+    const tagLabel = tagLabels[data.type] || 'File';
+    
+    item.innerHTML = `
+        <div class="knowledge-item-info">
+            <div class="knowledge-item-icon">
+                ${icon}
+            </div>
+            <div>
+                <div>
+                    <span class="knowledge-item-name">${data.name}</span>
+                    <span class="knowledge-item-tag ${data.type}">${tagLabel}</span>
+                </div>
+                ${data.size ? `<div class="knowledge-item-size">${data.size}</div>` : ''}
+                ${data.url ? `<div class="knowledge-item-size">${data.url}</div>` : ''}
+            </div>
+        </div>
+        <div class="knowledge-item-actions">
+            <button class="btn btn-sm btn-danger" onclick="removeKnowledgeItem('${data.id}')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>
+        </div>
+    `;
+    
+    return item;
+}
+
+function removeKnowledgeItem(id) {
+    const item = document.querySelector(`.knowledge-item[data-id="${id}"]`);
+    if (item) {
+        item.remove();
+        showNotification('Item removed from knowledge store', 'info');
+        
+        // Hide the list if it's now empty
+        const knowledgeList = document.getElementById('knowledgeStoreList');
+        if (knowledgeList && knowledgeList.children.length === 0) {
+            knowledgeList.style.display = 'none';
+        }
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function getDomainFromUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace('www.', '');
+    } catch (e) {
+        return url;
+    }
+}
+
+function getGithubRepoName(url) {
+    try {
+        const urlObj = new URL(url);
+        const parts = urlObj.pathname.split('/').filter(p => p);
+        if (parts.length >= 2) {
+            return `${parts[0]}/${parts[1]}`;
+        }
+        return urlObj.pathname;
+    } catch (e) {
+        return url;
+    }
+}
+
+function createTopicTag(data) {
+    const tag = document.createElement('div');
+    tag.className = 'topic-tag';
+    tag.dataset.id = data.id;
+    
+    // Generate random color for border
+    const colors = [
+        '#ef4444', // red
+        '#f59e0b', // amber
+        '#10b981', // emerald
+        '#3b82f6', // blue
+        '#8b5cf6', // violet
+        '#ec4899', // pink
+        '#14b8a6', // teal
+        '#6366f1', // indigo
+        '#f97316', // orange
+        '#06b6d4'  // cyan
+    ];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    tag.style.borderColor = randomColor;
+    tag.style.color = randomColor;
+    
+    tag.innerHTML = `
+        <span class="topic-text">${data.name}</span>
+        <button class="topic-delete" onclick="removeTopicTag('${data.id}')" style="color: ${randomColor}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    `;
+    
+    return tag;
+}
+
+function removeTopicTag(id) {
+    const tag = document.querySelector(`.topic-tag[data-id="${id}"]`);
+    if (tag) {
+        tag.remove();
+        showNotification('Topic removed', 'info');
+        
+        // Check if container is empty and hide if needed
+        const container = document.getElementById('searchTopicsContainer');
+        if (container && container.children.length === 0) {
+            container.remove();
+        }
+    }
+}

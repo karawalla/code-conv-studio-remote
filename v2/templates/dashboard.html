@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Any-to-Any Conversion Studio</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=7">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/liquid-glass.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=9">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/liquid-glass.css') }}?v=4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/targets.css') }}?v=2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -62,6 +63,13 @@
                     <span>Targets</span>
                 </a>
                 
+                <a href="#agents" class="nav-item" data-page="agents">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span>Agents</span>
+                </a>
+                
                 <a href="#jobs" class="nav-item" data-page="jobs">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
@@ -101,8 +109,8 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <h2 id="pageTitle">Dashboard</h2>
-                    <span class="breadcrumb">Home</span>
+                    <!-- <h2 id="pageTitle">Dashboard</h2>
+                    <span class="breadcrumb">Home</span> -->
                 </div>
                 <div class="top-bar-right">
                     <button class="btn btn-icon">
@@ -218,6 +226,7 @@
                 <div id="sourcesPage" class="page">
                     <div class="page-header">
                         <div>
+                            <!-- <h3>Sources</h3> -->
                             <p>Manage source repositories and folders for conversion</p>
                         </div>
                         <button class="btn btn-primary liquid-glass" onclick="showAddSourceModal()">
@@ -260,10 +269,10 @@
                 <div id="targetsPage" class="page">
                     <div class="page-header">
                         <div>
-                            <h3>Configured Targets</h3>
-                            <p>Manage target platforms and frameworks</p>
+                            <!-- <h3>Targets</h3> -->
+                            <p>Manage target platforms and conversion prompts</p>
                         </div>
-                        <button class="btn btn-primary">
+                        <button class="btn btn-primary liquid-glass" onclick="showAddTargetModal()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                             </svg>
@@ -271,8 +280,45 @@
                         </button>
                     </div>
                     
-                    <div class="targets-grid" id="targetsGrid">
-                        <!-- Targets will be loaded here -->
+                    <div class="targets-container">
+                        <div id="targetsGrid" class="targets-grid">
+                            <!-- Targets will be loaded here -->
+                        </div>
+                        <div id="noTargetsMessage" class="empty-state liquid-glass" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-3-3-3 3v-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h2m0-4v4m0 0h6m-6 0H9"/>
+                            </svg>
+                            <h4>No targets configured</h4>
+                            <p>Add your first target to get started</p>
+                            <button class="btn btn-primary liquid-glass" onclick="showAddTargetModal()">Add Target</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Agents Page -->
+                <div id="agentsPage" class="page">
+                    <div class="page-header">
+                        <div>
+                            <!-- <h3>AI Agents</h3> -->
+                            <p>Configure and manage AI agents for automated conversions</p>
+                        </div>
+                        <button class="btn btn-primary liquid-glass">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add Agent
+                        </button>
+                    </div>
+                    
+                    <div class="agents-container">
+                        <div class="empty-state liquid-glass">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                            <h4>No agents configured</h4>
+                            <p>AI agents will help automate your conversion workflows</p>
+                            <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--gray-500);">Coming soon...</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -280,7 +326,7 @@
                 <div id="jobsPage" class="page">
                     <div class="page-header">
                         <div>
-                            <h3>Conversion Jobs</h3>
+                            <!-- <h3>Conversion Jobs</h3> -->
                             <p>View and manage all conversion jobs</p>
                         </div>
                         <button class="btn btn-primary" onclick="showNewJobModal()">
@@ -331,7 +377,7 @@
                 <div id="settingsPage" class="page">
                     <div class="page-header">
                         <div>
-                            <h3>Settings</h3>
+                            <!-- <h3>Settings</h3> -->
                             <p>Configure application settings and preferences</p>
                         </div>
                     </div>
@@ -518,6 +564,331 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Target Modal -->
+    <div id="addTargetModal" class="modal">
+        <div class="modal-content modal-xl liquid-glass" style="max-width: none !important; width: 85vw !important;">
+            <div class="modal-header">
+                <h3>Add New Target</h3>
+                <button class="modal-close" onclick="closeModal('addTargetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="target-edit-container">
+                    <div class="target-info-section">
+                        <div class="form-group">
+                            <label>Target Name</label>
+                            <input type="text" id="targetName" placeholder="e.g., Python FastAPI" class="form-input liquid-glass">
+                            <small class="form-hint">Give your target a descriptive name</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="targetDescription" rows="2" placeholder="e.g., Python frameworks including Django, FastAPI, Flask" class="form-input liquid-glass"></textarea>
+                            <small class="form-hint">Brief description of what this target covers</small>
+                        </div>
+                    </div>
+                    
+                    <div class="prompts-section">
+                        <h4>Conversion Prompts</h4>
+                        <div class="tabs">
+                            <div class="tab-list" role="tablist">
+                                <button class="tab-button active" data-tab="add-analyze" onclick="switchAddTargetTab('add-analyze')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zM13 19v-8a2 2 0 00-2-2h-2a2 2 0 00-2 2v8a2 2 0 002 2h2a2 2 0 002-2zM21 19v-10a2 2 0 00-2-2h-2a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2z"/>
+                                    </svg>
+                                    Analyze
+                                </button>
+                                <button class="tab-button" data-tab="add-plan" onclick="switchAddTargetTab('add-plan')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                    </svg>
+                                    Plan
+                                </button>
+                                <button class="tab-button" data-tab="add-migrate" onclick="switchAddTargetTab('add-migrate')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                    </svg>
+                                    Migrate
+                                </button>
+                                <button class="tab-button" data-tab="add-validate" onclick="switchAddTargetTab('add-validate')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Validate
+                                </button>
+                                <button class="tab-button" data-tab="add-fix" onclick="switchAddTargetTab('add-fix')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    </svg>
+                                    Fix
+                                </button>
+                                <button class="tab-button" data-tab="add-discuss" onclick="switchAddTargetTab('add-discuss')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                    </svg>
+                                    Discuss
+                                </button>
+                            </div>
+                            <div class="tab-panels">
+                                <div class="tab-panel active" id="add-analyze-panel">
+                                    <textarea id="addPromptAnalyze" rows="4" placeholder="Enter the analyze prompt..." class="form-input liquid-glass"></textarea>
+                                </div>
+                                <div class="tab-panel" id="add-plan-panel">
+                                    <textarea id="addPromptPlan" rows="4" placeholder="Enter the planning prompt..." class="form-input liquid-glass"></textarea>
+                                </div>
+                                <div class="tab-panel" id="add-migrate-panel">
+                                    <textarea id="addPromptMigrate" rows="4" placeholder="Enter the migration prompt..." class="form-input liquid-glass"></textarea>
+                                </div>
+                                <div class="tab-panel" id="add-validate-panel">
+                                    <textarea id="addPromptValidate" rows="4" placeholder="Enter the validation prompt..." class="form-input liquid-glass"></textarea>
+                                </div>
+                                <div class="tab-panel" id="add-fix-panel">
+                                    <textarea id="addPromptFix" rows="4" placeholder="Enter the fix prompt..." class="form-input liquid-glass"></textarea>
+                                </div>
+                                <div class="tab-panel" id="add-discuss-panel">
+                                    <textarea id="addPromptDiscuss" rows="4" placeholder="Enter the discussion prompt..." class="form-input liquid-glass"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addTargetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addTarget()">
+                    <span id="addTargetBtnText">Create Target</span>
+                    <div class="spinner" id="addTargetSpinner" style="display: none;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Target Modal -->
+    <div id="editTargetModal" class="modal">
+        <div class="modal-content modal-xl liquid-glass" style="max-width: none !important; width: 85vw !important;">
+            <div class="modal-header">
+                <h3><span id="editTargetTitle">Edit Target</span></h3>
+                <button class="btn btn-secondary" onclick="closeModal('editTargetModal')">Close</button>
+            </div>
+            <div class="modal-body">
+                <div class="target-edit-container">
+                    <div class="target-info-section">
+                        <div class="form-group">
+                            <label>Target Name</label>
+                            <input type="text" id="editTargetName" class="form-input liquid-glass">
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="editTargetDescription" rows="2" class="form-input liquid-glass"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Main tabs for Conversion Prompts and Knowledge Store -->
+                    <div class="main-tabs">
+                        <div class="main-tab-list" role="tablist">
+                            <button class="main-tab-button active" data-main-tab="prompts" onclick="switchMainTab('prompts')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Conversion Prompts
+                            </button>
+                            <button class="main-tab-button" data-main-tab="knowledge" onclick="switchMainTab('knowledge')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                </svg>
+                                Knowledge Store
+                            </button>
+                        </div>
+                        
+                        <!-- Conversion Prompts Tab Content -->
+                        <div class="main-tab-panel active" id="prompts-panel">
+                            <div class="prompts-section">
+                                <div class="tabs">
+                                    <div class="tab-list" role="tablist">
+                                <button class="tab-button active" data-tab="analyze" onclick="switchTab('analyze')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zM13 19v-8a2 2 0 00-2-2h-2a2 2 0 00-2 2v8a2 2 0 002 2h2a2 2 0 002-2zM21 19v-10a2 2 0 00-2-2h-2a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2z"/>
+                                    </svg>
+                                    Analyze
+                                </button>
+                                <button class="tab-button" data-tab="plan" onclick="switchTab('plan')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                    </svg>
+                                    Plan
+                                </button>
+                                <button class="tab-button" data-tab="migrate" onclick="switchTab('migrate')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                    </svg>
+                                    Migrate
+                                </button>
+                                <button class="tab-button" data-tab="validate" onclick="switchTab('validate')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Validate
+                                </button>
+                                <button class="tab-button" data-tab="fix" onclick="switchTab('fix')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243z"/>
+                                    </svg>
+                                    Fix
+                                </button>
+                                <button class="tab-button" data-tab="discuss" onclick="switchTab('discuss')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                    </svg>
+                                    Discuss
+                                </button>
+                            </div>
+                            
+                            <div class="tab-content">
+                                <div class="tab-panel active" data-panel="analyze">
+                                    <label>Analyze Prompt</label>
+                                    <textarea id="promptAnalyze" rows="4" class="form-input liquid-glass prompt-textarea"></textarea>
+                                    <small class="form-hint">Prompt for analyzing source code architecture and patterns</small>
+                                </div>
+                                <div class="tab-panel" data-panel="plan">
+                                    <label>Plan Prompt</label>
+                                    <textarea id="promptPlan" rows="4" class="form-input liquid-glass prompt-textarea"></textarea>
+                                    <small class="form-hint">Prompt for creating migration plan</small>
+                                </div>
+                                <div class="tab-panel" data-panel="migrate">
+                                    <label>Migrate Prompt</label>
+                                    <textarea id="promptMigrate" rows="4" class="form-input liquid-glass prompt-textarea"></textarea>
+                                    <small class="form-hint">Prompt for converting code to target framework</small>
+                                </div>
+                                <div class="tab-panel" data-panel="validate">
+                                    <label>Validate Prompt</label>
+                                    <textarea id="promptValidate" rows="4" class="form-input liquid-glass prompt-textarea"></textarea>
+                                    <small class="form-hint">Prompt for validating migrated code</small>
+                                </div>
+                                <div class="tab-panel" data-panel="fix">
+                                    <label>Fix Prompt</label>
+                                    <textarea id="promptFix" rows="4" class="form-input liquid-glass prompt-textarea"></textarea>
+                                    <small class="form-hint">Prompt for fixing issues in migrated code</small>
+                                </div>
+                                <div class="tab-panel" data-panel="discuss">
+                                    <label>Discuss Prompt</label>
+                                    <textarea id="promptDiscuss" rows="4" class="form-input liquid-glass prompt-textarea"></textarea>
+                                    <small class="form-hint">Prompt for discussing migration approaches</small>
+                                </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Knowledge Store Tab Content -->
+                        <div class="main-tab-panel" id="knowledge-panel">
+                            <div class="knowledge-store-section">
+                                <!-- Knowledge Store Sub-tabs -->
+                                <div class="knowledge-tabs">
+                                    <div class="knowledge-tab-list" role="tablist">
+                                        <button class="knowledge-tab-button active" data-knowledge-tab="search" onclick="switchKnowledgeTab('search')">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                            </svg>
+                                            Search Topics
+                                        </button>
+                                        <button class="knowledge-tab-button" data-knowledge-tab="samples" onclick="switchKnowledgeTab('samples')">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                                            </svg>
+                                            GitHub Samples
+                                        </button>
+                                        <button class="knowledge-tab-button" data-knowledge-tab="docs" onclick="switchKnowledgeTab('docs')">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                            Docs & Files
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Search Topics Tab Panel -->
+                                    <div class="knowledge-tab-panel active" data-knowledge-panel="search">
+                                        <div class="knowledge-section">
+                                            <div class="knowledge-input-group">
+                                                <input type="text" id="searchTopicInput" placeholder="e.g., FastAPI best practices, React hooks patterns" class="form-input liquid-glass">
+                                                <button class="btn btn-primary liquid-glass" onclick="addSearchTopic()">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                    </svg>
+                                                    Add Topic
+                                                </button>
+                                            </div>
+                                            <small class="form-hint">Add topics for the agent to research automatically</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- GitHub Samples Tab Panel -->
+                                    <div class="knowledge-tab-panel" data-knowledge-panel="samples">
+                                        <div class="knowledge-section">
+                                            <div class="knowledge-input-group">
+                                                <input type="url" id="githubUrlInput" placeholder="https://github.com/user/repo or specific file URL" class="form-input liquid-glass">
+                                                <button class="btn btn-primary liquid-glass" onclick="addGithubSample()">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                    </svg>
+                                                    Add Sample
+                                                </button>
+                                            </div>
+                                            <small class="form-hint">Add GitHub repositories or specific code examples</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Docs & Files Tab Panel -->
+                                    <div class="knowledge-tab-panel" data-knowledge-panel="docs">
+                                        <div class="knowledge-section">
+                                            <!-- Documentation URLs -->
+                                            <div class="knowledge-subsection">
+                                                <h6>Documentation Links</h6>
+                                                <div class="knowledge-input-group">
+                                                    <input type="url" id="docUrlInput" placeholder="https://docs.example.com/api-reference" class="form-input liquid-glass">
+                                                    <button class="btn btn-primary liquid-glass" onclick="addDocumentationUrl()">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                        </svg>
+                                                        Add URL
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- File Upload -->
+                                            <div class="knowledge-subsection">
+                                                <h6>Local Files</h6>
+                                                <div class="knowledge-upload-area liquid-glass" onclick="triggerFileUpload()">
+                                                    <input type="file" id="knowledgeFileInput" multiple accept=".pdf,.md,.txt,.doc,.docx" style="display: none;" onchange="handleFileUpload(event)">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                                    </svg>
+                                                    <p>Drop files here or click to browse</p>
+                                                    <small>PDF, MD, TXT, DOC, DOCX files supported</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                    
+                                    <!-- Knowledge Items List (hidden) -->
+                                    <div id="knowledgeStoreList" class="knowledge-list" style="display: none;">
+                                        <!-- Knowledge store items will be listed here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editTargetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTarget()">
+                    <span id="saveTargetBtnText">Save Changes</span>
+                    <div class="spinner" id="saveTargetSpinner" style="display: none;"></div>
+                </button>
             </div>
         </div>
     </div>
