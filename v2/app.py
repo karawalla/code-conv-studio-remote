@@ -355,6 +355,90 @@ def delete_target(target_id):
         logger.error(f"Error deleting target: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/agents')
+def get_agents():
+    """Get all configured agents"""
+    try:
+        from services.agents_service import AgentsService
+        agents_service = AgentsService(Config.DATA_FOLDER)
+        agents = agents_service.get_all_agents()
+        return jsonify(agents)
+    except Exception as e:
+        logger.error(f"Error getting agents: {e}")
+        return jsonify([])
+
+@app.route('/api/agents/<agent_id>')
+def get_agent(agent_id):
+    """Get a specific agent by ID"""
+    try:
+        from services.agents_service import AgentsService
+        agents_service = AgentsService(Config.DATA_FOLDER)
+        agent = agents_service.get_agent(agent_id)
+        if agent:
+            return jsonify(agent)
+        else:
+            return jsonify({'error': 'Agent not found'}), 404
+    except Exception as e:
+        logger.error(f"Error getting agent: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/agents', methods=['POST'])
+def create_agent():
+    """Create a new agent"""
+    try:
+        from services.agents_service import AgentsService
+        agents_service = AgentsService(Config.DATA_FOLDER)
+        data = request.get_json()
+        result = agents_service.create_agent(data)
+        return jsonify(result), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating agent: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/agents/<agent_id>', methods=['PUT'])
+def update_agent(agent_id):
+    """Update an existing agent"""
+    try:
+        from services.agents_service import AgentsService
+        agents_service = AgentsService(Config.DATA_FOLDER)
+        data = request.get_json()
+        result = agents_service.update_agent(agent_id, data)
+        if result:
+            return jsonify(result)
+        else:
+            return jsonify({'error': 'Agent not found'}), 404
+    except Exception as e:
+        logger.error(f"Error updating agent: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/agents/<agent_id>', methods=['DELETE'])
+def delete_agent(agent_id):
+    """Delete an agent"""
+    try:
+        from services.agents_service import AgentsService
+        agents_service = AgentsService(Config.DATA_FOLDER)
+        if agents_service.delete_agent(agent_id):
+            return jsonify({'message': 'Agent deleted successfully'})
+        else:
+            return jsonify({'error': 'Agent not found'}), 404
+    except Exception as e:
+        logger.error(f"Error deleting agent: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/agents/capabilities/catalog')
+def get_capabilities_catalog():
+    """Get catalog of all available capabilities"""
+    try:
+        from services.agents_service import AgentsService
+        agents_service = AgentsService(Config.DATA_FOLDER)
+        catalog = agents_service.get_capabilities_catalog()
+        return jsonify(catalog)
+    except Exception as e:
+        logger.error(f"Error getting capabilities catalog: {e}")
+        return jsonify({})
+
 @app.route('/api/jobs')
 def get_jobs():
     """Get jobs list"""

@@ -162,6 +162,9 @@ async function loadPageData(pageName) {
         case 'targets':
             await loadTargets();
             break;
+        case 'agents':
+            await loadAgents();
+            break;
         case 'jobs':
             await loadJobs();
             break;
@@ -1408,4 +1411,375 @@ function removeTopicTag(id) {
             container.remove();
         }
     }
+}
+
+// ============= Agents Management =============
+let currentAgents = [];
+let capabilitiesCatalog = {};
+let currentEditingAgent = null;
+
+// Load agents when switching to agents page
+function loadAgents() {
+    fetch('/api/agents')
+        .then(response => response.json())
+        .then(agents => {
+            currentAgents = agents;
+            renderAgents(agents);
+        })
+        .catch(error => {
+            console.error('Error loading agents:', error);
+            showNotification('Failed to load agents', 'error');
+        });
+}
+
+// Render agents in the container
+function renderAgents(agents) {
+    const container = document.getElementById('agentsContainer');
+    
+    if (!agents || agents.length === 0) {
+        container.innerHTML = `
+            <div class="agents-empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <h4>No agents configured</h4>
+                <p>AI agents will help automate your conversion workflows</p>
+                <button class="btn btn-primary" onclick="showAddAgentModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 20px; height: 20px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Your First Agent
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = agents.map(agent => `
+        <div class="agent-card ${agent.status === 'inactive' ? 'inactive' : ''}" onclick="showEditAgentModal('${agent.id}')">
+            <div class="agent-status ${agent.status === 'inactive' ? 'inactive' : ''}"></div>
+            <div class="agent-header">
+                <div class="agent-avatar">${agent.avatar || '🤖'}</div>
+                <div class="agent-info">
+                    <h4 class="agent-name">${agent.name}</h4>
+                    <div class="agent-role">${agent.role.replace('_', ' ')}</div>
+                </div>
+            </div>
+            <p class="agent-description">${agent.description || 'No description provided'}</p>
+            <div class="agent-capabilities">
+                <div class="capabilities-label">Capabilities</div>
+                <div class="capabilities-list">
+                    ${agent.capabilities.slice(0, 3).map(cap => `
+                        <div class="capability-badge">
+                            <span class="capability-icon">${cap.icon}</span>
+                            <span>${cap.name}</span>
+                        </div>
+                    `).join('')}
+                    ${agent.capabilities.length > 3 ? `
+                        <div class="capability-badge">+${agent.capabilities.length - 3} more</div>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="agent-actions">
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); showExecuteAgentModal('${agent.id}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Execute
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); showEditAgentModal('${agent.id}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Configure
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Show add agent modal
+function showAddAgentModal() {
+    // Load capabilities catalog first
+    fetch('/api/agents/capabilities/catalog')
+        .then(response => response.json())
+        .then(catalog => {
+            capabilitiesCatalog = catalog;
+            updateCapabilitiesSuggestions();
+            showModal('addAgentModal');
+        });
+}
+
+// Show edit agent modal
+function showEditAgentModal(agentId) {
+    const agent = currentAgents.find(a => a.id === agentId);
+    if (!agent) return;
+    
+    currentEditingAgent = agent;
+    
+    // Populate form fields
+    document.getElementById('editAgentId').value = agent.id;
+    document.getElementById('editAgentName').value = agent.name;
+    document.getElementById('editAgentDescription').value = agent.description || '';
+    document.getElementById('editAgentAvatar').value = agent.avatar || '🤖';
+    document.getElementById('editAgentStatus').value = agent.status || 'active';
+    
+    // Load capabilities catalog and render
+    fetch('/api/agents/capabilities/catalog')
+        .then(response => response.json())
+        .then(catalog => {
+            capabilitiesCatalog = catalog;
+            renderEditCapabilities(agent);
+            showModal('editAgentModal');
+        });
+}
+
+// Update capabilities suggestions based on role
+function updateCapabilitiesSuggestions() {
+    const role = document.getElementById('newAgentRole').value;
+    const container = document.getElementById('capabilitiesSection');
+    
+    // Always show common capabilities
+    let html = `
+        <div class="capability-group">
+            <div class="capability-group-title">Common Capabilities</div>
+            ${renderCapabilityGroup(capabilitiesCatalog.common || [])}
+        </div>
+    `;
+    
+    // Show role-specific capabilities if not custom
+    if (role !== 'custom' && capabilitiesCatalog[role]) {
+        html += `
+            <div class="capability-group">
+                <div class="capability-group-title">${role.replace('_', ' ')} Capabilities</div>
+                ${renderCapabilityGroup(capabilitiesCatalog[role])}
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Render capability group
+function renderCapabilityGroup(capabilities) {
+    return capabilities.map(cap => `
+        <div class="capability-checkbox">
+            <input type="checkbox" id="cap_${cap.id}" value="${cap.id}" ${cap.id === 'file_read' || cap.id === 'search' ? 'checked' : ''}>
+            <label for="cap_${cap.id}">
+                <span class="capability-icon">${cap.icon}</span>
+                <span class="capability-name">${cap.name}</span>
+                <span class="capability-desc">${cap.description}</span>
+            </label>
+        </div>
+    `).join('');
+}
+
+// Render capabilities for editing
+function renderEditCapabilities(agent) {
+    const container = document.getElementById('editCapabilitiesSection');
+    const agentCapIds = agent.capabilities.map(c => c.id);
+    
+    let html = '<div class="capability-group"><div class="capability-group-title">Common Capabilities</div>';
+    
+    (capabilitiesCatalog.common || []).forEach(cap => {
+        const isChecked = agentCapIds.includes(cap.id);
+        html += `
+            <div class="capability-checkbox">
+                <input type="checkbox" id="edit_cap_${cap.id}" value="${cap.id}" ${isChecked ? 'checked' : ''}>
+                <label for="edit_cap_${cap.id}">
+                    <span class="capability-icon">${cap.icon}</span>
+                    <span class="capability-name">${cap.name}</span>
+                    <span class="capability-desc">${cap.description}</span>
+                </label>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    // Add role-specific capabilities
+    if (agent.role !== 'custom' && capabilitiesCatalog[agent.role]) {
+        html += `<div class="capability-group"><div class="capability-group-title">${agent.role.replace('_', ' ')} Capabilities</div>`;
+        
+        capabilitiesCatalog[agent.role].forEach(cap => {
+            const isChecked = agentCapIds.includes(cap.id);
+            html += `
+                <div class="capability-checkbox">
+                    <input type="checkbox" id="edit_cap_${cap.id}" value="${cap.id}" ${isChecked ? 'checked' : ''}>
+                    <label for="edit_cap_${cap.id}">
+                        <span class="capability-icon">${cap.icon}</span>
+                        <span class="capability-name">${cap.name}</span>
+                        <span class="capability-desc">${cap.description}</span>
+                    </label>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+    }
+    
+    container.innerHTML = html;
+}
+
+// Create new agent
+function createAgent() {
+    const name = document.getElementById('newAgentName').value.trim();
+    const role = document.getElementById('newAgentRole').value;
+    const description = document.getElementById('newAgentDescription').value.trim();
+    const avatar = document.getElementById('newAgentAvatar').value.trim() || '🤖';
+    
+    if (!name) {
+        showNotification('Please enter an agent name', 'error');
+        return;
+    }
+    
+    // Get selected capabilities
+    const selectedCaps = [];
+    const checkboxes = document.querySelectorAll('#capabilitiesSection input[type="checkbox"]:checked');
+    
+    checkboxes.forEach(cb => {
+        const capId = cb.value;
+        // Find capability in catalog
+        let capability = null;
+        
+        Object.values(capabilitiesCatalog).forEach(group => {
+            const found = group.find(c => c.id === capId);
+            if (found) capability = found;
+        });
+        
+        if (capability) {
+            selectedCaps.push(capability);
+        }
+    });
+    
+    const agentData = {
+        name,
+        role,
+        description,
+        avatar,
+        capabilities: selectedCaps
+    };
+    
+    fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agentData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.error) {
+            showNotification(result.error, 'error');
+        } else {
+            showNotification('Agent created successfully', 'success');
+            closeModal('addAgentModal');
+            loadAgents();
+            
+            // Clear form
+            document.getElementById('newAgentName').value = '';
+            document.getElementById('newAgentRole').value = 'custom';
+            document.getElementById('newAgentDescription').value = '';
+            document.getElementById('newAgentAvatar').value = '';
+        }
+    })
+    .catch(error => {
+        console.error('Error creating agent:', error);
+        showNotification('Failed to create agent', 'error');
+    });
+}
+
+// Update existing agent
+function updateAgent() {
+    const agentId = document.getElementById('editAgentId').value;
+    const name = document.getElementById('editAgentName').value.trim();
+    const description = document.getElementById('editAgentDescription').value.trim();
+    const avatar = document.getElementById('editAgentAvatar').value.trim() || '🤖';
+    const status = document.getElementById('editAgentStatus').value;
+    
+    if (!name) {
+        showNotification('Please enter an agent name', 'error');
+        return;
+    }
+    
+    // Get selected capabilities
+    const selectedCaps = [];
+    const checkboxes = document.querySelectorAll('#editCapabilitiesSection input[type="checkbox"]:checked');
+    
+    checkboxes.forEach(cb => {
+        const capId = cb.value;
+        // Find capability in catalog
+        let capability = null;
+        
+        Object.values(capabilitiesCatalog).forEach(group => {
+            const found = group.find(c => c.id === capId);
+            if (found) capability = found;
+        });
+        
+        if (capability) {
+            selectedCaps.push(capability);
+        }
+    });
+    
+    const updates = {
+        name,
+        description,
+        avatar,
+        status,
+        capabilities: selectedCaps
+    };
+    
+    fetch(`/api/agents/${agentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.error) {
+            showNotification(result.error, 'error');
+        } else {
+            showNotification('Agent updated successfully', 'success');
+            closeModal('editAgentModal');
+            loadAgents();
+        }
+    })
+    .catch(error => {
+        console.error('Error updating agent:', error);
+        showNotification('Failed to update agent', 'error');
+    });
+}
+
+// Delete agent
+function deleteAgent() {
+    const agentId = document.getElementById('editAgentId').value;
+    const agentName = document.getElementById('editAgentName').value;
+    
+    if (confirm(`Are you sure you want to delete the agent "${agentName}"? This action cannot be undone.`)) {
+        fetch(`/api/agents/${agentId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.error) {
+                showNotification(result.error, 'error');
+            } else {
+                showNotification('Agent deleted successfully', 'success');
+                closeModal('editAgentModal');
+                loadAgents();
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting agent:', error);
+            showNotification('Failed to delete agent', 'error');
+        });
+    }
+}
+
+// Show execute agent modal
+function showExecuteAgentModal(agentId) {
+    const agent = currentAgents.find(a => a.id === agentId);
+    if (!agent) return;
+    
+    // TODO: Implement agent execution modal
+    showNotification('Agent execution coming soon!', 'info');
 }
