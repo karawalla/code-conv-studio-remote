@@ -1,0 +1,466 @@
+{
+  "agents": {
+    "b5494bbb-6ddf-49e5-b00b-b21bec9f050e": {
+      "id": "b5494bbb-6ddf-49e5-b00b-b21bec9f050e",
+      "name": "Code Architect",
+      "role": "architect",
+      "description": "Designs system architecture and creates technical plans",
+      "avatar": "\ud83c\udfd7\ufe0f",
+      "status": "active",
+      "capabilities": [
+        {
+          "id": "file_create",
+          "name": "Create File",
+          "description": "Create new files in the project",
+          "icon": "\ud83d\udcc4"
+        },
+        {
+          "id": "file_read",
+          "name": "Read File",
+          "description": "Read and analyze file contents",
+          "icon": "\ud83d\udcd6"
+        },
+        {
+          "id": "file_delete",
+          "name": "Delete File",
+          "description": "Remove files from the project",
+          "icon": "\ud83d\uddd1\ufe0f"
+        },
+        {
+          "id": "search",
+          "name": "Search",
+          "description": "Search through codebase and documentation",
+          "icon": "\ud83d\udd0d"
+        },
+        {
+          "id": "send_email",
+          "name": "Send Email",
+          "description": "Send email notifications",
+          "icon": "\ud83d\udce7"
+        },
+        {
+          "id": "send_notification",
+          "name": "Send Notification",
+          "description": "Send system notifications",
+          "icon": "\ud83d\udd14"
+        },
+        {
+          "id": "plan",
+          "name": "Plan Architecture",
+          "description": "Create detailed system architecture plans",
+          "icon": "\ud83d\udccb"
+        },
+        {
+          "id": "analyze",
+          "name": "Analyze System",
+          "description": "Analyze existing system architecture and patterns",
+          "icon": "\ud83d\udd2c"
+        },
+        {
+          "id": "document_architecture",
+          "name": "Document Architecture",
+          "description": "Create architecture documentation and diagrams",
+          "icon": "\ud83d\udcd0"
+        }
+      ],
+      "created_at": "2025-06-27T09:51:06.318559",
+      "updated_at": "2025-06-27T09:51:06.318609"
+    },
+    "39d0567e-036a-4681-aebc-c05b7595b953": {
+      "id": "39d0567e-036a-4681-aebc-c05b7595b953",
+      "name": "Code Engineer",
+      "role": "engineer",
+      "description": "Implements code migrations and transformations",
+      "avatar": "\ud83d\udc68\u200d\ud83d\udcbb",
+      "status": "active",
+      "capabilities": [
+        {
+          "id": "file_create",
+          "name": "Create File",
+          "description": "Create new files in the project",
+          "icon": "\ud83d\udcc4"
+        },
+        {
+          "id": "file_read",
+          "name": "Read File",
+          "description": "Read and analyze file contents",
+          "icon": "\ud83d\udcd6"
+        },
+        {
+          "id": "file_delete",
+          "name": "Delete File",
+          "description": "Remove files from the project",
+          "icon": "\ud83d\uddd1\ufe0f"
+        },
+        {
+          "id": "search",
+          "name": "Search",
+          "description": "Search through codebase and documentation",
+          "icon": "\ud83d\udd0d"
+        },
+        {
+          "id": "send_email",
+          "name": "Send Email",
+          "description": "Send email notifications",
+          "icon": "\ud83d\udce7"
+        },
+        {
+          "id": "send_notification",
+          "name": "Send Notification",
+          "description": "Send system notifications",
+          "icon": "\ud83d\udd14"
+        },
+        {
+          "id": "migrate",
+          "name": "Migrate Code",
+          "description": "Transform code from one framework to another",
+          "icon": "\ud83d\udd04"
+        },
+        {
+          "id": "generate",
+          "name": "Generate Code",
+          "description": "Generate new code based on specifications",
+          "icon": "\u26a1"
+        },
+        {
+          "id": "validate",
+          "name": "Validate Code",
+          "description": "Validate code quality and correctness",
+          "icon": "\u2705"
+        },
+        {
+          "id": "refactor",
+          "name": "Refactor Code",
+          "description": "Improve code structure and quality",
+          "icon": "\ud83d\udd27"
+        }
+      ],
+      "created_at": "2025-06-27T09:51:06.318612",
+      "updated_at": "2025-06-27T09:51:06.318613"
+    },
+    "4c5f607a-4ad3-467a-bf57-83ea6ec6a0b0": {
+      "id": "4c5f607a-4ad3-467a-bf57-83ea6ec6a0b0",
+      "name": "Technical Writer",
+      "role": "writer",
+      "description": "Creates documentation and guides",
+      "avatar": "\u270d\ufe0f",
+      "status": "active",
+      "capabilities": [
+        {
+          "id": "file_create",
+          "name": "Create File",
+          "description": "Create new files in the project",
+          "icon": "\ud83d\udcc4"
+        },
+        {
+          "id": "file_read",
+          "name": "Read File",
+          "description": "Read and analyze file contents",
+          "icon": "\ud83d\udcd6"
+        },
+        {
+          "id": "file_delete",
+          "name": "Delete File",
+          "description": "Remove files from the project",
+          "icon": "\ud83d\uddd1\ufe0f"
+        },
+        {
+          "id": "search",
+          "name": "Search",
+          "description": "Search through codebase and documentation",
+          "icon": "\ud83d\udd0d"
+        },
+        {
+          "id": "send_email",
+          "name": "Send Email",
+          "description": "Send email notifications",
+          "icon": "\ud83d\udce7"
+        },
+        {
+          "id": "send_notification",
+          "name": "Send Notification",
+          "description": "Send system notifications",
+          "icon": "\ud83d\udd14"
+        },
+        {
+          "id": "document_code",
+          "name": "Document Code",
+          "description": "Create inline code documentation and comments",
+          "icon": "\ud83d\udcdd"
+        },
+        {
+          "id": "write_help",
+          "name": "Write Help Docs",
+          "description": "Create user help documentation",
+          "icon": "\u2753"
+        },
+        {
+          "id": "create_guides",
+          "name": "Create How-To Guides",
+          "description": "Write step-by-step tutorials and guides",
+          "icon": "\ud83d\udcda"
+        },
+        {
+          "id": "api_docs",
+          "name": "API Documentation",
+          "description": "Generate API reference documentation",
+          "icon": "\ud83d\udce1"
+        }
+      ],
+      "created_at": "2025-06-27T09:51:06.318615",
+      "updated_at": "2025-06-27T09:51:06.318616"
+    },
+    "d4601371-4b67-4c45-a217-18fa656a25df": {
+      "id": "d4601371-4b67-4c45-a217-18fa656a25df",
+      "name": "Project Manager",
+      "role": "manager",
+      "description": "Manages projects and coordinates team activities",
+      "avatar": "\ud83d\udcca",
+      "status": "active",
+      "capabilities": [
+        {
+          "id": "file_create",
+          "name": "Create File",
+          "description": "Create new files in the project",
+          "icon": "\ud83d\udcc4"
+        },
+        {
+          "id": "file_read",
+          "name": "Read File",
+          "description": "Read and analyze file contents",
+          "icon": "\ud83d\udcd6"
+        },
+        {
+          "id": "file_delete",
+          "name": "Delete File",
+          "description": "Remove files from the project",
+          "icon": "\ud83d\uddd1\ufe0f"
+        },
+        {
+          "id": "search",
+          "name": "Search",
+          "description": "Search through codebase and documentation",
+          "icon": "\ud83d\udd0d"
+        },
+        {
+          "id": "send_email",
+          "name": "Send Email",
+          "description": "Send email notifications",
+          "icon": "\ud83d\udce7"
+        },
+        {
+          "id": "send_notification",
+          "name": "Send Notification",
+          "description": "Send system notifications",
+          "icon": "\ud83d\udd14"
+        },
+        {
+          "id": "project_kickoff",
+          "name": "Project Kickoff",
+          "description": "Initialize new projects with proper structure",
+          "icon": "\ud83d\ude80"
+        },
+        {
+          "id": "project_tracking",
+          "name": "Track Progress",
+          "description": "Monitor project progress and milestones",
+          "icon": "\ud83d\udcc8"
+        },
+        {
+          "id": "jira_create",
+          "name": "Create Jira Issues",
+          "description": "Create and manage Jira tickets",
+          "icon": "\ud83c\udfab"
+        },
+        {
+          "id": "jira_update",
+          "name": "Update Jira",
+          "description": "Update Jira ticket status and comments",
+          "icon": "\ud83d\udd04"
+        },
+        {
+          "id": "resource_planning",
+          "name": "Resource Planning",
+          "description": "Plan and allocate team resources",
+          "icon": "\ud83d\udc65"
+        },
+        {
+          "id": "risk_assessment",
+          "name": "Risk Assessment",
+          "description": "Identify and assess project risks",
+          "icon": "\u26a0\ufe0f"
+        }
+      ],
+      "created_at": "2025-06-27T09:51:06.318617",
+      "updated_at": "2025-06-27T09:51:06.318618"
+    },
+    "31683b0f-6947-4661-88dd-9e6300d7991f": {
+      "id": "31683b0f-6947-4661-88dd-9e6300d7991f",
+      "name": "Scrum Master",
+      "role": "scrum_master",
+      "description": "Facilitates Scrum ceremonies and agile practices",
+      "avatar": "\ud83c\udfc3",
+      "status": "active",
+      "capabilities": [
+        {
+          "id": "file_create",
+          "name": "Create File",
+          "description": "Create new files in the project",
+          "icon": "\ud83d\udcc4"
+        },
+        {
+          "id": "file_read",
+          "name": "Read File",
+          "description": "Read and analyze file contents",
+          "icon": "\ud83d\udcd6"
+        },
+        {
+          "id": "file_delete",
+          "name": "Delete File",
+          "description": "Remove files from the project",
+          "icon": "\ud83d\uddd1\ufe0f"
+        },
+        {
+          "id": "search",
+          "name": "Search",
+          "description": "Search through codebase and documentation",
+          "icon": "\ud83d\udd0d"
+        },
+        {
+          "id": "send_email",
+          "name": "Send Email",
+          "description": "Send email notifications",
+          "icon": "\ud83d\udce7"
+        },
+        {
+          "id": "send_notification",
+          "name": "Send Notification",
+          "description": "Send system notifications",
+          "icon": "\ud83d\udd14"
+        },
+        {
+          "id": "sprint_planning",
+          "name": "Sprint Planning",
+          "description": "Plan and organize sprint activities",
+          "icon": "\ud83d\udcc5"
+        },
+        {
+          "id": "daily_standup",
+          "name": "Daily Standup",
+          "description": "Facilitate daily standup meetings",
+          "icon": "\u2600\ufe0f"
+        },
+        {
+          "id": "sprint_review",
+          "name": "Sprint Review",
+          "description": "Conduct sprint review sessions",
+          "icon": "\ud83d\udd0d"
+        },
+        {
+          "id": "retrospective",
+          "name": "Retrospective",
+          "description": "Facilitate sprint retrospectives",
+          "icon": "\ud83d\udd04"
+        },
+        {
+          "id": "backlog_grooming",
+          "name": "Backlog Grooming",
+          "description": "Refine and prioritize backlog items",
+          "icon": "\ud83d\udccb"
+        },
+        {
+          "id": "velocity_tracking",
+          "name": "Track Velocity",
+          "description": "Monitor team velocity and burndown",
+          "icon": "\ud83d\udcca"
+        }
+      ],
+      "created_at": "2025-06-27T09:51:06.318619",
+      "updated_at": "2025-06-27T09:51:06.318620"
+    },
+    "75c9c4ec-fc48-40de-b536-04c9f3151e7a": {
+      "id": "75c9c4ec-fc48-40de-b536-04c9f3151e7a",
+      "name": "DevOps Engineer",
+      "role": "devops",
+      "description": "Manages deployment and infrastructure automation",
+      "avatar": "\ud83d\udd27",
+      "status": "active",
+      "capabilities": [
+        {
+          "id": "file_create",
+          "name": "Create File",
+          "description": "Create new files in the project",
+          "icon": "\ud83d\udcc4"
+        },
+        {
+          "id": "file_read",
+          "name": "Read File",
+          "description": "Read and analyze file contents",
+          "icon": "\ud83d\udcd6"
+        },
+        {
+          "id": "file_delete",
+          "name": "Delete File",
+          "description": "Remove files from the project",
+          "icon": "\ud83d\uddd1\ufe0f"
+        },
+        {
+          "id": "search",
+          "name": "Search",
+          "description": "Search through codebase and documentation",
+          "icon": "\ud83d\udd0d"
+        },
+        {
+          "id": "send_email",
+          "name": "Send Email",
+          "description": "Send email notifications",
+          "icon": "\ud83d\udce7"
+        },
+        {
+          "id": "send_notification",
+          "name": "Send Notification",
+          "description": "Send system notifications",
+          "icon": "\ud83d\udd14"
+        },
+        {
+          "id": "deploy",
+          "name": "Deploy Application",
+          "description": "Deploy applications to various environments",
+          "icon": "\ud83d\ude80"
+        },
+        {
+          "id": "ci_pipeline",
+          "name": "Create CI Pipeline",
+          "description": "Set up continuous integration pipelines",
+          "icon": "\ud83d\udd04"
+        },
+        {
+          "id": "cd_pipeline",
+          "name": "Create CD Pipeline",
+          "description": "Set up continuous deployment pipelines",
+          "icon": "\ud83d\udce6"
+        },
+        {
+          "id": "infrastructure",
+          "name": "Manage Infrastructure",
+          "description": "Provision and manage cloud infrastructure",
+          "icon": "\u2601\ufe0f"
+        },
+        {
+          "id": "monitoring",
+          "name": "Setup Monitoring",
+          "description": "Configure monitoring and alerting",
+          "icon": "\ud83d\udcca"
+        },
+        {
+          "id": "security_scan",
+          "name": "Security Scanning",
+          "description": "Run security vulnerability scans",
+          "icon": "\ud83d\udd12"
+        }
+      ],
+      "created_at": "2025-06-27T09:51:06.318622",
+      "updated_at": "2025-06-27T09:51:06.318623"
+    }
+  }
+}
