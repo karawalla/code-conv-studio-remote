@@ -197,7 +197,7 @@ async function loadSources() {
                         </div>
                     </td>
                     <td>
-                        <span class="source-type-badge ${source.type}">
+                        <span class="source-type-badge ${source.type} liquid-glass">
                             ${source.type === 'github' ? '🐙' : '📁'} ${source.type}
                         </span>
                     </td>
@@ -210,14 +210,14 @@ async function loadSources() {
                     <td>${createdDate}</td>
                     <td>
                         <div class="source-actions">
-                            <button class="btn btn-sm btn-secondary" onclick="viewSourceTree('${source.id}', '${source.name}')">
+                            <button class="btn btn-sm btn-secondary liquid-glass" onclick="viewSourceTree('${source.id}', '${source.name}')">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                                 </svg>
                                 View Tree
                             </button>
                             ${source.type === 'github' ? `
-                                <button class="btn btn-sm btn-secondary" onclick="updateSource('${source.id}')">
+                                <button class="btn btn-sm btn-secondary liquid-glass" onclick="updateSource('${source.id}')">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                     </svg>
@@ -554,7 +554,7 @@ function updateTreeNavigation() {
     
     // Root item
     const rootItem = document.createElement('div');
-    rootItem.className = 'tree-nav-item';
+    rootItem.className = 'tree-nav-item liquid-glass';
     rootItem.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -574,7 +574,7 @@ function updateTreeNavigation() {
         
         // Path item
         const pathItem = document.createElement('div');
-        pathItem.className = 'tree-nav-item';
+        pathItem.className = 'tree-nav-item liquid-glass';
         pathItem.textContent = segment;
         pathItem.onclick = () => navigateToPath(treeState.currentPath.slice(0, index + 1));
         nav.appendChild(pathItem);

@@ -541,7 +541,8 @@ body {
 
 .page-header p {
     color: var(--gray-600);
-    margin-top: 0.25rem;
+    margin: 0;
+    font-size: 0.875rem;
 }
 
 /* Grids */
