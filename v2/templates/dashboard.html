@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Any-to-Any Conversion Studio</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=5">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -204,9 +204,9 @@
                     <div class="page-header">
                         <div>
                             <h3>Configured Sources</h3>
-                            <p>Manage source frameworks and languages for conversion</p>
+                            <p>Manage source repositories and folders for conversion</p>
                         </div>
-                        <button class="btn btn-primary">
+                        <button class="btn btn-primary" onclick="showAddSourceModal()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                             </svg>
@@ -214,8 +214,31 @@
                         </button>
                     </div>
                     
-                    <div class="sources-grid" id="sourcesGrid">
-                        <!-- Sources will be loaded here -->
+                    <!-- Sources Table -->
+                    <div class="sources-table-container">
+                        <table class="sources-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Location</th>
+                                    <th>Files</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sourcesTableBody">
+                                <!-- Sources will be loaded here -->
+                            </tbody>
+                        </table>
+                        <div id="noSourcesMessage" class="empty-state" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                            </svg>
+                            <h4>No sources configured</h4>
+                            <p>Add your first source to get started</p>
+                            <button class="btn btn-primary" onclick="showAddSourceModal()">Add Source</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -383,6 +406,104 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('newJobModal')">Cancel</button>
                 <button class="btn btn-primary">Create Job</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Source Modal -->
+    <div id="addSourceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Source</h3>
+                <button class="modal-close" onclick="closeModal('addSourceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="source-type-selector">
+                    <label class="source-type-option">
+                        <input type="radio" name="sourceType" value="github" checked onchange="toggleSourceTypeFields()">
+                        <div class="source-type-card">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+                            </svg>
+                            <span>GitHub Repository</span>
+                        </div>
+                    </label>
+                    <label class="source-type-option">
+                        <input type="radio" name="sourceType" value="local" onchange="toggleSourceTypeFields()">
+                        <div class="source-type-card">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                            <span>Local Folder</span>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>Source Name</label>
+                    <input type="text" id="sourceName" placeholder="Enter a descriptive name" class="form-input">
+                </div>
+                
+                <div id="githubFields">
+                    <div class="form-group">
+                        <label>Repository URL</label>
+                        <input type="text" id="repoUrl" placeholder="https://github.com/user/repo.git" class="form-input">
+                        <small class="form-hint">Public repositories only (private repos require authentication setup)</small>
+                    </div>
+                </div>
+                
+                <div id="localFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Folder Path</label>
+                        <input type="text" id="folderPath" placeholder="/path/to/folder" class="form-input">
+                        <small class="form-hint">Enter the absolute path to your local folder</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addSourceModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addSource()">
+                    <span id="addSourceBtnText">Add Source</span>
+                    <div class="spinner" id="addSourceSpinner" style="display: none;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Source Tree Modal -->
+    <div id="sourceTreeModal" class="modal">
+        <div class="modal-content modal-xl" style="max-width: none !important; width: 95vw !important;">
+            <div class="modal-header">
+                <h3><span id="sourceTreeTitle">Source Tree</span></h3>
+                <button class="btn btn-secondary" onclick="closeModal('sourceTreeModal')">Close</button>
+            </div>
+            <div class="modal-body">
+                <div class="tree-split-view">
+                    <div class="tree-panel">
+                        <div class="tree-navigation" id="treeNavigation">
+                            <!-- Navigation breadcrumb will be added here -->
+                        </div>
+                        <div class="tree-container">
+                            <div id="sourceTreeContent" class="file-tree">
+                                <!-- Tree will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-panel">
+                        <div class="content-header" id="contentHeader">
+                            <span class="content-filename">Select a file to view</span>
+                        </div>
+                        <div class="content-body" id="contentBody">
+                            <div class="content-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <p>Select a file from the tree to view its contents</p>
+                            </div>
+                            <pre id="fileContent" class="file-content" style="display: none;"></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

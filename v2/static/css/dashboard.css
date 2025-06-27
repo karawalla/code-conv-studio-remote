@@ -126,8 +126,7 @@ body {
 }
 
 .nav-item.active {
-    background: var(--primary);
-    color: var(--white);
+    color: var(--primary);
 }
 
 .nav-icon {
@@ -811,12 +810,51 @@ body {
     overflow-y: auto;
 }
 
+/* Force source tree modal to be full width */
+#sourceTreeModal.modal {
+    padding: 20px !important;
+}
+
+#sourceTreeModal .modal-content.modal-xl {
+    width: calc(100vw - 40px) !important;
+    max-width: calc(100vw - 40px) !important;
+    margin: 0 auto !important;
+}
+
+/* Override for extra large modal */
+.modal-xl .modal-content {
+    max-width: none !important;
+    width: 95vw !important;
+    height: 90vh !important;
+}
+
+/* Specific override for source tree modal */
+#sourceTreeModal .modal-content {
+    max-width: none !important;
+    width: 95vw !important;
+    height: 90vh !important;
+}
+
 .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 1.5rem;
-    border-bottom: 1px solid var(--gray-200);
+    background: var(--white);
+    border-bottom: 2px solid var(--gray-200);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.modal-header h3 {
+    color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modal-header h3::before {
+    content: '📁';
+    font-size: 1.25rem;
 }
 
 .modal-header h3 {
@@ -826,21 +864,24 @@ body {
 }
 
 .modal-close {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    color: var(--gray-500);
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    font-size: 1.25rem;
+    color: var(--gray-600);
     cursor: pointer;
     border-radius: var(--radius);
+    transition: var(--transition);
 }
 
 .modal-close:hover {
     background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
 }
 
 .modal-body {
@@ -848,12 +889,7 @@ body {
 }
 
 .modal-footer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 1rem;
-    padding: 1.5rem;
-    border-top: 1px solid var(--gray-200);
+    display: none; /* Hide footer for tree modal */
 }
 
 .form-group {
@@ -895,6 +931,388 @@ body {
     color: var(--gray-400);
 }
 
+/* Sources Table */
+.sources-table-container {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.sources-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sources-table th,
+.sources-table td {
+    padding: 1rem;
+    text-align: left;
+}
+
+.sources-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.sources-table tr:not(:last-child) td {
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.sources-table tr:hover {
+    background: var(--gray-50);
+}
+
+.source-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.source-type-badge.github {
+    background: var(--gray-900);
+    color: var(--white);
+}
+
+.source-type-badge.local {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.source-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    color: var(--gray-500);
+}
+
+.empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+    color: var(--gray-300);
+}
+
+.empty-state h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+}
+
+/* Source Type Selector */
+.source-type-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.source-type-option {
+    position: relative;
+    cursor: pointer;
+}
+
+.source-type-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.source-type-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-lg);
+    transition: var(--transition);
+}
+
+.source-type-card svg {
+    width: 32px;
+    height: 32px;
+    color: var(--gray-600);
+}
+
+.source-type-option input[type="radio"]:checked + .source-type-card {
+    border-color: var(--primary);
+    background: var(--gray-50);
+}
+
+.source-type-option input[type="radio"]:checked + .source-type-card svg {
+    color: var(--primary);
+}
+
+/* Form Hints */
+.form-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--white);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Modal Sizes */
+.modal-lg .modal-content {
+    max-width: 800px;
+}
+
+.modal-xl .modal-body {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+    height: calc(90vh - 120px); /* Fixed height accounting for header/footer */
+}
+
+/* File Tree */
+/* Tree Split View */
+.tree-split-view {
+    display: flex;
+    height: 100%;
+    min-height: 0; /* Important for flex children */
+}
+
+.tree-panel {
+    width: 25%;
+    min-width: 280px;
+    max-width: 350px;
+    border-right: 3px solid var(--gray-100);
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    overflow: hidden;
+}
+
+.content-panel {
+    flex: 1;
+    width: 75%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0; /* Important for flex children */
+}
+
+.tree-navigation {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--white);
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.tree-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tree-nav-item:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.tree-nav-separator {
+    color: var(--gray-400);
+}
+
+.tree-container {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--white);
+    padding: 1rem;
+}
+
+.file-tree {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+}
+
+.tree-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.tree-item:hover {
+    background: transparent;
+}
+
+.tree-item:hover .tree-label {
+    color: var(--primary);
+}
+
+.tree-item:hover .tree-icon {
+    color: var(--primary);
+}
+
+.tree-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 0.75rem;
+    color: var(--gray-400);
+}
+
+.tree-folder .tree-icon {
+    color: var(--gray-600);
+}
+
+.tree-file .tree-icon {
+    color: var(--gray-400);
+}
+
+.tree-label {
+    flex: 1;
+    color: var(--gray-600);
+}
+
+.tree-folder .tree-label {
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.tree-info {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-left: 0.5rem;
+}
+
+/* File type colors - subtle */
+.tree-file.file-js > .tree-icon { color: #9b8c00; }
+.tree-file.file-ts > .tree-icon { color: #005a8f; }
+.tree-file.file-py > .tree-icon { color: #2b5b84; }
+.tree-file.file-java > .tree-icon { color: #005c75; }
+.tree-file.file-json > .tree-icon { color: #4a4a4a; }
+.tree-file.file-xml > .tree-icon { color: #cc5200; }
+.tree-file.file-md > .tree-icon { color: #062e79; }
+.tree-file.file-yml > .tree-icon,
+.tree-file.file-yaml > .tree-icon { color: #8f1217; }
+.tree-file.file-git > .tree-icon { color: #b33c26; }
+
+/* Selected item override - ensure no background */
+.tree-item.selected {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.tree-item.selected .tree-icon {
+    color: var(--primary) !important;
+}
+
+.tree-item.selected .tree-label {
+    color: var(--primary) !important;
+    font-weight: 500 !important;
+}
+
+.tree-item.selected .tree-info {
+    color: var(--primary) !important;
+}
+
+/* Content Panel */
+.content-header {
+    padding: 1rem;
+    background: var(--white);
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.content-filename {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+}
+
+.content-body {
+    flex: 1;
+    overflow: auto;
+    background: var(--white);
+}
+
+.content-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--gray-400);
+}
+
+.content-placeholder svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+}
+
+.content-placeholder p {
+    font-size: 0.875rem;
+}
+
+.file-content {
+    margin: 0;
+    padding: 1.5rem;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--gray-900);
+    background: var(--white);
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    height: 100%;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .dashboard-row {
@@ -903,6 +1321,10 @@ body {
     
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .source-type-selector {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -928,5 +1350,18 @@ body {
     
     .form-row {
         grid-template-columns: 1fr;
+    }
+    
+    .sources-table {
+        font-size: 0.875rem;
+    }
+    
+    .sources-table th,
+    .sources-table td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .source-actions {
+        flex-direction: column;
     }
 }

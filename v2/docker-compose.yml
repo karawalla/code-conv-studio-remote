@@ -11,4 +11,5 @@ services:
       - DEBUG=True
     volumes:
       - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # For docker operations if needed
     restart: unless-stopped

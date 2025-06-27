@@ -8,6 +8,8 @@ from flask_cors import CORS
 import os
 import logging
 from datetime import datetime
+from services import SourcesService
+import base64
 
 # Application Configuration
 class Config:
@@ -35,6 +37,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Initialize services
+sources_service = SourcesService()
 
 # Routes
 @app.route('/')
@@ -87,38 +92,180 @@ def dashboard_stats():
 
 @app.route('/api/sources')
 def get_sources():
-    """Get configured sources"""
-    # Mock data
-    sources = [
-        {
-            'id': 'java-spring',
-            'name': 'Java Spring Boot',
-            'description': 'Spring Boot 2.x/3.x applications',
-            'icon': '☕',
-            'active': True,
-            'frameworks': ['Spring Boot 2.x', 'Spring Boot 3.x', 'Spring Cloud'],
-            'file_patterns': ['*.java', 'pom.xml', 'build.gradle']
-        },
-        {
-            'id': 'python-django',
-            'name': 'Python Django',
-            'description': 'Django 3.x/4.x applications',
-            'icon': '🐍',
-            'active': True,
-            'frameworks': ['Django 3.x', 'Django 4.x', 'Django REST Framework'],
-            'file_patterns': ['*.py', 'requirements.txt', 'manage.py']
-        },
-        {
-            'id': 'nodejs-express',
-            'name': 'Node.js Express',
-            'description': 'Express.js applications',
-            'icon': '🟢',
-            'active': True,
-            'frameworks': ['Express 4.x', 'Express 5.x', 'NestJS'],
-            'file_patterns': ['*.js', '*.ts', 'package.json']
-        }
-    ]
-    return jsonify(sources)
+    """Get all configured sources"""
+    try:
+        sources = sources_service.list_sources()
+        # Transform for UI display
+        ui_sources = []
+        for source in sources:
+            ui_source = {
+                'id': source['id'],
+                'name': source['name'],
+                'type': source['type'],
+                'description': f"{source['type'].title()} repository",
+                'icon': '📦' if source['type'] == 'local' else '🐙',
+                'active': source.get('status') == 'active',
+                'created_at': source.get('created_at'),
+                'updated_at': source.get('updated_at'),
+                'info': source.get('info', {})
+            }
+            if source['type'] == 'github':
+                ui_source['url'] = source.get('url')
+            ui_sources.append(ui_source)
+        return jsonify(ui_sources)
+    except Exception as e:
+        logger.error(f"Error getting sources: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sources', methods=['POST'])
+def add_source():
+    """Add a new source (GitHub repo or local folder)"""
+    try:
+        data = request.get_json()
+        source_type = data.get('type')
+        name = data.get('name')
+        
+        if source_type == 'github':
+            url = data.get('url')
+            if not url:
+                return jsonify({'error': 'URL is required for GitHub sources'}), 400
+            
+            result = sources_service.add_github_repo(url, name)
+            return jsonify(result), 201
+            
+        elif source_type == 'local':
+            path = data.get('path')
+            if not path:
+                return jsonify({'error': 'Path is required for local sources'}), 400
+            
+            result = sources_service.add_local_folder(path, name)
+            return jsonify(result), 201
+            
+        else:
+            return jsonify({'error': 'Invalid source type. Must be "github" or "local"'}), 400
+            
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except FileNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except RuntimeError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        logger.error(f"Error adding source: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/sources/<source_id>')
+def get_source(source_id):
+    """Get a specific source by ID"""
+    try:
+        source = sources_service.get_source(source_id)
+        if source:
+            return jsonify(source)
+        else:
+            return jsonify({'error': 'Source not found'}), 404
+    except Exception as e:
+        logger.error(f"Error getting source: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sources/<source_id>', methods=['DELETE'])
+def delete_source(source_id):
+    """Delete a source"""
+    try:
+        success = sources_service.delete_source(source_id)
+        if success:
+            return jsonify({'message': 'Source deleted successfully'})
+        else:
+            return jsonify({'error': 'Source not found'}), 404
+    except Exception as e:
+        logger.error(f"Error deleting source: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sources/<source_id>/update', methods=['POST'])
+def update_source(source_id):
+    """Update a source (pull latest for GitHub repos)"""
+    try:
+        result = sources_service.update_source(source_id)
+        if result:
+            return jsonify(result)
+        else:
+            return jsonify({'error': 'Failed to update source or source not found'}), 400
+    except Exception as e:
+        logger.error(f"Error updating source: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sources/<source_id>/tree')
+def get_source_tree(source_id):
+    """Get file tree for a source"""
+    try:
+        source = sources_service.get_source(source_id)
+        if not source:
+            return jsonify({'error': 'Source not found'}), 404
+        
+        # Get file tree
+        from services.sources_service import FileManager
+        tree = FileManager.get_file_tree(source['path'])
+        
+        return jsonify(tree)
+    except Exception as e:
+        logger.error(f"Error getting source tree: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sources/<source_id>/file')
+def get_source_file(source_id):
+    """Get file content from a source"""
+    try:
+        source = sources_service.get_source(source_id)
+        if not source:
+            return jsonify({'error': 'Source not found'}), 404
+        
+        # Get file path from query params
+        file_path = request.args.get('path')
+        if not file_path:
+            return jsonify({'error': 'File path is required'}), 400
+        
+        # Construct full path
+        full_path = os.path.join(source['path'], file_path)
+        
+        # Security check - ensure path is within source directory
+        if not os.path.abspath(full_path).startswith(os.path.abspath(source['path'])):
+            return jsonify({'error': 'Invalid file path'}), 403
+        
+        if not os.path.exists(full_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        if not os.path.isfile(full_path):
+            return jsonify({'error': 'Path is not a file'}), 400
+        
+        # Read file content
+        try:
+            # Check if it's a binary file
+            with open(full_path, 'rb') as f:
+                content = f.read(1024)  # Read first 1KB to check
+                
+            # Try to decode as text
+            try:
+                content = open(full_path, 'r', encoding='utf-8').read()
+                return jsonify({'content': content, 'type': 'text'})
+            except UnicodeDecodeError:
+                # Binary file - check if it's an image
+                import base64
+                ext = os.path.splitext(file_path)[1].lower()
+                image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.bmp', '.webp']
+                
+                if ext in image_extensions:
+                    with open(full_path, 'rb') as f:
+                        content = base64.b64encode(f.read()).decode('utf-8')
+                    return jsonify({'content': content, 'type': 'image'})
+                else:
+                    return jsonify({'content': None, 'type': 'binary'})
+                    
+        except Exception as e:
+            logger.error(f"Error reading file: {e}")
+            return jsonify({'error': 'Error reading file'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error getting file content: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/targets')
 def get_targets():
