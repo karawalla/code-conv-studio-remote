@@ -3761,6 +3761,8 @@ async function executeTask(stageId, taskIndex) {
     
     // Get the execute button and show loading state
     const btn = document.querySelector(`#task_${stageId}_${taskIndex} .task-execute-btn`);
+    const taskElement = document.querySelector(`#task_${stageId}_${taskIndex}`);
+    
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = `
@@ -3769,6 +3771,9 @@ async function executeTask(stageId, taskIndex) {
             </svg>
         `;
     }
+    
+    // Show executing status
+    showNotification('Executing task with Claude...', 'info');
     
     try {
         const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/execute`, {
@@ -3792,22 +3797,68 @@ async function executeTask(stageId, taskIndex) {
                 if (btn) {
                     btn.remove();
                 }
+                
+                // Show execution summary if available
+                if (result.prompt_results && result.prompt_results.length > 0) {
+                    const successCount = result.prompt_results.filter(r => r.status === 'success').length;
+                    const totalCount = result.prompt_results.length;
+                    showNotification(`Executed ${successCount}/${totalCount} prompts successfully`, 'success');
+                }
             } else {
                 showNotification('Task execution failed: ' + (result.error || 'Unknown error'), 'error');
+                
+                // Update task status to failed
+                const statusDot = document.querySelector(`#task_${stageId}_${taskIndex} .task-status-dot`);
+                if (statusDot) {
+                    statusDot.className = 'task-status-dot failed';
+                }
             }
             
-            // Show execution details
+            // Show execution details in console for debugging
             console.log('Execution result:', result);
             
-            // Optionally refresh the job details
-            await showInlineJobDetail(jobId);
+            // Show execution details in a collapsible section
+            if (result.execution_id && taskElement) {
+                const detailsHtml = `
+                    <div class="execution-details" style="margin-top: 10px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; font-size: 12px;">
+                        <div style="color: var(--text-secondary); margin-bottom: 5px;">Execution ID: ${result.execution_id}</div>
+                        ${result.prompt_results ? `
+                            <div style="margin-top: 5px;">
+                                ${result.prompt_results.map(pr => `
+                                    <div style="margin: 3px 0;">
+                                        <span style="color: ${pr.status === 'success' ? '#10b981' : '#ef4444'};">●</span>
+                                        ${pr.prompt_file}: ${pr.status}
+                                        ${pr.error ? `<span style="color: #ef4444; font-size: 11px;"> - ${pr.error}</span>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                // Add details after the task config section
+                const configSection = taskElement.querySelector('.task-config-section');
+                if (configSection) {
+                    configSection.insertAdjacentHTML('afterend', detailsHtml);
+                }
+            }
+            
+            // Optionally refresh the job details after a short delay
+            setTimeout(() => showInlineJobDetail(jobId), 1000);
             
         } else {
             showNotification(result.error || 'Failed to execute task', 'error');
+            
+            // Show more details if available
+            if (result.error && result.error.includes('No prompts found')) {
+                showNotification('This agent/capability combination does not have prompts configured yet', 'warning');
+            } else if (result.error && result.error.includes('Claude session manager not initialized')) {
+                showNotification('Claude CLI is not properly configured. Please check your Claude installation.', 'error');
+            }
         }
     } catch (error) {
         console.error('Error executing task:', error);
-        showNotification('Failed to execute task', 'error');
+        showNotification('Failed to execute task: ' + error.message, 'error');
     } finally {
         // Reset button if it still exists
         if (btn && btn.parentNode) {

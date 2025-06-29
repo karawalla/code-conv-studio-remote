@@ -47,6 +47,11 @@ def index():
     """Main dashboard page"""
     return render_template('dashboard.html')
 
+@app.route('/orchestration')
+def orchestration_viewer():
+    """Prompt orchestration viewer page"""
+    return render_template('orchestration_viewer.html')
+
 @app.route('/api/health')
 def health():
     """Health check endpoint"""
@@ -981,6 +986,39 @@ def search_credentials():
         return jsonify(credentials)
     except Exception as e:
         logger.error(f"Error searching credentials: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Orchestration Endpoints
+@app.route('/api/orchestration/info')
+def get_orchestration_info():
+    """Get information about prompt orchestration"""
+    try:
+        from services.prompt_orchestrator import prompt_orchestrator
+        info = prompt_orchestrator.get_orchestration_info()
+        return jsonify(info)
+    except Exception as e:
+        logger.error(f"Error getting orchestration info: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/orchestration/validate', methods=['POST'])
+def validate_orchestration():
+    """Validate orchestration for specific agent/capability/targets"""
+    try:
+        from services.prompt_orchestrator import prompt_orchestrator
+        data = request.get_json()
+        
+        agent = data.get('agent', '')
+        capability = data.get('capability', '')
+        targets = data.get('targets', [])
+        
+        if not agent or not capability:
+            return jsonify({'error': 'Agent and capability are required'}), 400
+            
+        result = prompt_orchestrator.validate_orchestration(agent, capability, targets)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error validating orchestration: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Task Execution Endpoints

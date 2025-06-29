@@ -7,6 +7,7 @@ Create a comprehensive migration plan from {{source_name}} to {{target_name}} ba
 - Previous analysis results available
 - Target framework: {{target_name}}
 - Migration complexity: To be determined
+- **Note**: Target-specific implementation details will be handled by {{target_name}} prompts in subsequent steps
 
 ## Instructions
 
@@ -16,10 +17,11 @@ Create a comprehensive migration plan from {{source_name}} to {{target_name}} ba
    - Plan for data migration if applicable
 
 2. **Map source patterns to target patterns**
-   - Controllers/Routes → Target equivalent
-   - Services/Business Logic → Target patterns
-   - Data Models/Entities → Target ORM/Data layer
-   - Configuration → Target configuration approach
+   - Controllers/Routes → Target equivalent (will be detailed in target prompts)
+   - Services/Business Logic → Target patterns (will be detailed in target prompts)
+   - Data Models/Entities → Target ORM/Data layer (will be detailed in target prompts)
+   - Configuration → Target configuration approach (will be detailed in target prompts)
+   - **Focus on identifying WHAT needs to be migrated, not HOW (that's for target prompts)**
 
 3. **Create component mapping**
    ```
@@ -53,7 +55,9 @@ Create a comprehensive migration plan from {{source_name}} to {{target_name}} ba
 Produce a detailed migration plan document with:
 - Executive summary
 - Technical approach
-- Component mapping table
+- Component mapping table (high-level, details in target prompts)
 - Phase-by-phase breakdown
 - Risk assessment
 - Timeline estimates
+- **Handoff Points**: Clearly marked sections where target-specific prompts will provide implementation details
+- **Context for Target Prompts**: All necessary information that target prompts will need

@@ -4,17 +4,37 @@ Execution Service for running agent tasks using prompt templates
 import os
 import json
 import re
+import time
+import threading
+import queue
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import subprocess
 import tempfile
+import logging
+
+from .claude_auth_v2 import create_claude_auth_manager_v2, ClaudeSessionManagerV2
+from .prompt_orchestrator import prompt_orchestrator
+
+logger = logging.getLogger(__name__)
+
 
 class ExecutionService:
     def __init__(self):
         self.prompts_dir = Path(__file__).parent.parent / 'prompts'
         self.executions = {}
         self.execution_logs = []
+        
+        # Initialize Claude authentication
+        try:
+            self.auth_manager = create_claude_auth_manager_v2()
+            self.session_manager = ClaudeSessionManagerV2(self.auth_manager)
+            logger.info("Claude authentication manager initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Claude authentication: {e}")
+            self.auth_manager = None
+            self.session_manager = None
         
     def execute_task(self, job_id: str, stage_id: str, task_index: int, task: Dict[str, Any], job_context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -35,35 +55,71 @@ class ExecutionService:
         # Extract task details
         agent_name = task.get('agent', '').lower().replace(' ', '_')
         capability = task.get('name', '').lower().replace(' ', '_')
+        target_name = job_context.get('target_name', '').lower()
         
-        # Find prompt files for this agent/capability
-        prompt_dir = self.prompts_dir / agent_name / capability
+        # Get orchestrated prompt sequence
+        prompt_sequence = prompt_orchestrator.get_prompt_sequence(
+            agent=agent_name,
+            capability=capability,
+            target=target_name
+        )
         
-        if not prompt_dir.exists():
-            return {
-                'execution_id': execution_id,
-                'status': 'error',
-                'error': f'No prompts found for {agent_name}/{capability}',
-                'timestamp': datetime.now().isoformat()
-            }
+        if not prompt_sequence:
+            # Fallback to old behavior if no orchestration defined
+            prompt_dir = self.prompts_dir / agent_name / capability
+            
+            if not prompt_dir.exists():
+                return {
+                    'execution_id': execution_id,
+                    'status': 'error',
+                    'error': f'No prompts found for {agent_name}/{capability}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            # Get all markdown files in the directory, sorted by name
+            prompt_files = sorted(prompt_dir.glob('*.md'))
+            
+            if not prompt_files:
+                return {
+                    'execution_id': execution_id,
+                    'status': 'error', 
+                    'error': f'No prompt files found in {prompt_dir}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            # Convert to orchestrated format for consistency
+            prompt_sequence = [
+                {
+                    'type': 'agent',
+                    'path': pf,
+                    'file': pf.name,
+                    'purpose': 'Agent task',
+                    'agent': agent_name,
+                    'capability': capability
+                }
+                for pf in prompt_files
+            ]
         
-        # Get all markdown files in the directory, sorted by name
-        prompt_files = sorted(prompt_dir.glob('*.md'))
-        
-        if not prompt_files:
-            return {
-                'execution_id': execution_id,
-                'status': 'error', 
-                'error': f'No prompt files found in {prompt_dir}',
-                'timestamp': datetime.now().isoformat()
-            }
-        
-        # Execute each prompt file in sequence
+        # Execute each prompt in the orchestrated sequence
         results = []
         overall_status = 'success'
         
-        for prompt_file in prompt_files:
-            result = self._execute_prompt(prompt_file, job_context, task)
+        logger.info(f"Executing orchestrated sequence of {len(prompt_sequence)} prompts for {agent_name}/{capability} -> {target_name}")
+        
+        for prompt_info in prompt_sequence:
+            # Add prompt metadata to context
+            enhanced_context = {
+                **job_context,
+                'prompt_type': prompt_info['type'],
+                'prompt_purpose': prompt_info['purpose']
+            }
+            
+            if prompt_info['type'] == 'target':
+                enhanced_context['target_prompt'] = prompt_info['file']
+            else:
+                enhanced_context['agent_prompt'] = prompt_info['file']
+            
+            result = self._execute_prompt(prompt_info['path'], enhanced_context, task, prompt_info)
             results.append(result)
             
             if result['status'] == 'error':
@@ -88,7 +144,7 @@ class ExecutionService:
         
         return execution_result
     
-    def _execute_prompt(self, prompt_file: Path, context: Dict[str, Any], task: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_prompt(self, prompt_file: Path, context: Dict[str, Any], task: Dict[str, Any], prompt_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Execute a single prompt file using Claude
         
@@ -108,8 +164,40 @@ class ExecutionService:
             # Replace template variables
             prompt_content = self._substitute_variables(prompt_content, context)
             
+            # Add context about the task and orchestration
+            orchestration_context = ""
+            if prompt_info:
+                orchestration_context = f"""
+# Prompt Orchestration Context
+Prompt Type: {prompt_info.get('type', 'Unknown')}
+Purpose: {prompt_info.get('purpose', 'Unknown')}
+{'Target Framework: ' + prompt_info.get('target', '') if prompt_info.get('type') == 'target' else ''}
+{'Agent: ' + prompt_info.get('agent', '') + ' | Capability: ' + prompt_info.get('capability', '') if prompt_info.get('type') == 'agent' else ''}
+
+## Important Instructions:
+{'''- This is a TARGET-SPECIFIC prompt. Follow the patterns and best practices for the target framework.
+- Reference the source code and migration plan from previous steps.
+- Ensure all code follows idiomatic patterns for the target framework.''' if prompt_info.get('type') == 'target' else '''- This is an AGENT-SPECIFIC prompt. Focus on the agent's role and responsibilities.
+- If this capability involves target-specific work, subsequent prompts will handle target details.
+- Prepare outputs that can be used by target-specific prompts.'''}
+"""
+            
+            full_prompt = f"""# Task Execution Context
+Current Task: {task.get('name', 'Unknown')}
+Agent: {task.get('agent', 'Unknown')}
+Source: {context.get('source_name', 'Unknown')} ({context.get('source_type', 'Unknown')})
+Target: {context.get('target_name', 'Unknown')} ({context.get('target_type', 'Unknown')})
+Working Directory: {context.get('working_directory', os.getcwd())}
+{orchestration_context}
+# Task Configuration
+{json.dumps(task.get('configuration', {}), indent=2)}
+
+# Original Prompt
+{prompt_content}
+"""
+            
             # Prepare the command to execute with Claude
-            result = self._execute_with_claude(prompt_content, context)
+            result = self._execute_with_claude(full_prompt, context)
             
             return {
                 'prompt_file': str(prompt_file.name),
@@ -120,6 +208,7 @@ class ExecutionService:
             }
             
         except Exception as e:
+            logger.error(f"Error executing prompt {prompt_file}: {e}")
             return {
                 'prompt_file': str(prompt_file.name),
                 'status': 'error',
@@ -145,11 +234,12 @@ class ExecutionService:
     def _execute_with_claude(self, prompt: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute the prompt using Claude via command line
-        
-        This is where we'll integrate with claude-cli or API
         """
-        # For now, we'll create a mock implementation
-        # In production, this would call claude-cli or use Claude API
+        if not self.session_manager:
+            return {
+                'success': False,
+                'error': 'Claude session manager not initialized. Please check Claude CLI installation.'
+            }
         
         try:
             # Create a temporary file with the prompt
@@ -157,46 +247,124 @@ class ExecutionService:
                 f.write(prompt)
                 prompt_file = f.name
             
-            # Mock response for demonstration
-            # In real implementation, this would be:
-            # cmd = ['claude', 'run', prompt_file]
-            # result = subprocess.run(cmd, capture_output=True, text=True)
+            # Set working directory - use job's working directory if available
+            working_dir = context.get('working_directory', os.getcwd())
             
-            mock_output = f"""
-# Execution Result
-
-## Task: {context.get('task_name', 'Unknown')}
-## Status: Success
-
-### Analysis
-Successfully analyzed the prompt and would execute the following:
-- Agent: {context.get('agent', 'Unknown')}
-- Capability: {context.get('capability', 'Unknown')}
-- Source: {context.get('source_name', 'Unknown')}
-- Target: {context.get('target_name', 'Unknown')}
-
-### Next Steps
-1. Implement actual Claude CLI integration
-2. Process the response
-3. Update job status
-
-### Mock Output
-This is a mock execution. In production, this would:
-1. Call claude-cli with the prompt
-2. Process the response
-3. Execute any code changes
-4. Return structured results
-"""
+            # Create message queue for output
+            message_queue = queue.Queue()
+            output_lines = []
+            
+            # Function to process Claude output
+            def process_output(process):
+                try:
+                    for line in process.stdout:
+                        if not line.strip():
+                            continue
+                        
+                        try:
+                            message = json.loads(line.strip())
+                            
+                            # Extract text content from assistant messages
+                            if message.get("type") == "assistant":
+                                for content in message.get("message", {}).get("content", []):
+                                    if content.get("type") == "text":
+                                        text = content.get("text", "").strip()
+                                        if text:
+                                            output_lines.append(text)
+                                            message_queue.put({'type': 'message', 'content': text})
+                            
+                            # Handle tool use
+                            elif message.get("type") == "tool_use":
+                                tool_name = message.get('name', 'unknown')
+                                message_queue.put({'type': 'tool', 'content': f'Using tool: {tool_name}'})
+                            
+                            # Handle results
+                            elif message.get("type") == "result":
+                                subtype = message.get("subtype")
+                                if subtype == "success":
+                                    duration = message.get('duration_ms', 0) / 1000
+                                    cost = message.get('total_cost_usd', 0)
+                                    message_queue.put({
+                                        'type': 'success',
+                                        'content': f'Completed in {duration:.2f}s | Cost: ${cost:.4f}'
+                                    })
+                                else:
+                                    error_msg = message.get('message', 'Unknown error')
+                                    message_queue.put({'type': 'error', 'content': error_msg})
+                                    
+                        except json.JSONDecodeError:
+                            # If not JSON, treat as raw output
+                            if line.strip():
+                                output_lines.append(line.strip())
+                                
+                except Exception as e:
+                    logger.error(f"Error processing Claude output: {e}")
+                    message_queue.put({'type': 'error', 'content': str(e)})
+                finally:
+                    message_queue.put(None)  # Signal completion
+            
+            # Start Claude process
+            process = self.session_manager.start_claude_process(
+                prompt_file=prompt_file,
+                working_dir=working_dir,
+                allowed_tools="Read,Write,Edit,MultiEdit,Bash,Glob,Grep,LS"
+            )
+            
+            # Process output in a separate thread
+            output_thread = threading.Thread(target=process_output, args=(process,))
+            output_thread.start()
+            
+            # Collect output with timeout
+            timeout = 300  # 5 minutes timeout
+            start_time = time.time()
+            
+            while True:
+                if time.time() - start_time > timeout:
+                    logger.warning("Claude execution timed out")
+                    process.terminate()
+                    break
+                
+                try:
+                    msg = message_queue.get(timeout=1)
+                    if msg is None:
+                        break  # Process completed
+                    # Log messages for debugging
+                    logger.debug(f"Claude message: {msg}")
+                except queue.Empty:
+                    continue
+            
+            # Wait for output thread to complete
+            output_thread.join(timeout=5)
+            
+            # Get process return code
+            return_code = process.poll()
+            
+            # Read any stderr
+            stderr_output = process.stderr.read() if process.stderr else ""
             
             # Clean up
-            os.unlink(prompt_file)
+            try:
+                os.unlink(prompt_file)
+            except:
+                pass
+            
+            # Determine success
+            success = return_code == 0 and len(output_lines) > 0
+            
+            if not success and stderr_output:
+                logger.error(f"Claude stderr: {stderr_output}")
+                return {
+                    'success': False,
+                    'error': f'Claude execution failed: {stderr_output}'
+                }
             
             return {
-                'success': True,
-                'output': mock_output
+                'success': success,
+                'output': '\n'.join(output_lines)
             }
             
         except Exception as e:
+            logger.error(f"Error executing Claude: {e}")
             return {
                 'success': False,
                 'error': str(e)
