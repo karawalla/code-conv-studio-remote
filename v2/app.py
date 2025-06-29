@@ -983,6 +983,95 @@ def search_credentials():
         logger.error(f"Error searching credentials: {e}")
         return jsonify({'error': str(e)}), 500
 
+# Task Execution Endpoints
+@app.route('/api/jobs/<job_id>/stages/<stage_id>/tasks/<int:task_index>/execute', methods=['POST'])
+def execute_task(job_id, stage_id, task_index):
+    """Execute a specific task within a job stage"""
+    try:
+        from services.jobs_service import JobsService
+        from services.execution_service import execution_service
+        
+        jobs_service = JobsService(Config.DATA_FOLDER)
+        
+        # Get job details
+        job = jobs_service.get_job(job_id)
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        # Find the stage and task
+        stage = next((s for s in job.get('stages', []) if s['id'] == stage_id), None)
+        if not stage:
+            return jsonify({'error': 'Stage not found'}), 404
+            
+        if task_index >= len(stage.get('tasks', [])):
+            return jsonify({'error': 'Task not found'}), 404
+            
+        task = stage['tasks'][task_index]
+        
+        # Prepare execution context
+        context = {
+            'job_id': job_id,
+            'job_name': job.get('name', ''),
+            'source_id': job.get('source_id', ''),
+            'source_name': job.get('source_name', ''),
+            'source_type': job.get('source_type', ''),
+            'target_id': job.get('target_id', ''),
+            'target_name': job.get('target_name', ''),
+            'stage_id': stage_id,
+            'stage_name': stage.get('name', ''),
+            'task_name': task.get('name', ''),
+            'agent': task.get('agent', ''),
+            'capability': task.get('name', '').lower().replace(' ', '_'),
+            'task_config': task.get('config', {})
+        }
+        
+        # Execute the task
+        result = execution_service.execute_task(job_id, stage_id, task_index, task, context)
+        
+        # Update task status based on execution result
+        if result['status'] == 'success':
+            task['status'] = 'completed'
+        else:
+            task['status'] = 'failed'
+            
+        # Save updated job
+        jobs_service.update_job(job_id, job)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error executing task: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/executions/<execution_id>')
+def get_execution_details(execution_id):
+    """Get details of a specific execution"""
+    try:
+        from services.execution_service import execution_service
+        
+        execution = execution_service.get_execution_details(execution_id)
+        if execution:
+            return jsonify(execution)
+        else:
+            return jsonify({'error': 'Execution not found'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error getting execution details: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/jobs/<job_id>/executions')
+def get_job_executions(job_id):
+    """Get all executions for a specific job"""
+    try:
+        from services.execution_service import execution_service
+        
+        executions = execution_service.get_execution_history(job_id)
+        return jsonify(executions)
+        
+    except Exception as e:
+        logger.error(f"Error getting job executions: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):

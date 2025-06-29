@@ -2544,6 +2544,14 @@ function renderInlineJobStages(stages, currentStage) {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                     </svg>
                                 </button>
+                                ${task.status === 'pending' ? `
+                                    <button class="task-execute-btn" onclick="event.stopPropagation(); executeTask('${stage.id}', ${taskIndex})" title="Execute">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </button>
+                                ` : ''}
                             </div>
                             
                             <div class="task-config-section" id="taskConfig_${stage.id}_${taskIndex}" style="display: none;">
@@ -3740,6 +3748,77 @@ function closeTaskConnectionModal() {
     const modal = document.getElementById('taskConnectionModal');
     if (modal) {
         modal.classList.remove('show');
+    }
+}
+
+// Execute a task
+async function executeTask(stageId, taskIndex) {
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    if (!jobId) {
+        showNotification('No job selected', 'error');
+        return;
+    }
+    
+    // Get the execute button and show loading state
+    const btn = document.querySelector(`#task_${stageId}_${taskIndex} .task-execute-btn`);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `
+            <svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+        `;
+    }
+    
+    try {
+        const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/execute`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            if (result.status === 'success') {
+                showNotification('Task executed successfully', 'success');
+                // Update task status in UI
+                const statusDot = document.querySelector(`#task_${stageId}_${taskIndex} .task-status-dot`);
+                if (statusDot) {
+                    statusDot.className = 'task-status-dot completed';
+                }
+                // Remove execute button
+                if (btn) {
+                    btn.remove();
+                }
+            } else {
+                showNotification('Task execution failed: ' + (result.error || 'Unknown error'), 'error');
+            }
+            
+            // Show execution details
+            console.log('Execution result:', result);
+            
+            // Optionally refresh the job details
+            await showInlineJobDetail(jobId);
+            
+        } else {
+            showNotification(result.error || 'Failed to execute task', 'error');
+        }
+    } catch (error) {
+        console.error('Error executing task:', error);
+        showNotification('Failed to execute task', 'error');
+    } finally {
+        // Reset button if it still exists
+        if (btn && btn.parentNode) {
+            btn.disabled = false;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            `;
+        }
     }
 }
 

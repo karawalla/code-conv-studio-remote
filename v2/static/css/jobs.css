@@ -226,6 +226,50 @@
     height: 16px;
 }
 
+/* Task Execute Button */
+.task-execute-btn {
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    color: var(--success);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+}
+
+.task-execute-btn:hover {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.task-execute-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.task-execute-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.task-execute-btn .animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* Task Configuration Section */
 .task-config-section {
     margin-top: 0.75rem;
