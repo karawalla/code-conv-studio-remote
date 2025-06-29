@@ -16,6 +16,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Selection Modals -->
+    <div id="sourceSelectionModal" class="selection-modal">
+        <div class="selection-modal-content">
+            <div class="selection-modal-header">
+                <h3>Select Source</h3>
+                <button class="selection-modal-close" onclick="closeSelectionModal('source')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="selection-modal-body">
+                <div class="selection-grid" id="sourceSelectionGrid">
+                    <!-- Source cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="targetSelectionModal" class="selection-modal">
+        <div class="selection-modal-content">
+            <div class="selection-modal-header">
+                <h3>Select Target</h3>
+                <button class="selection-modal-close" onclick="closeSelectionModal('target')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="selection-modal-body">
+                <div class="selection-grid" id="targetSelectionGrid">
+                    <!-- Target cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SVG Filters for Liquid Glass Effect -->
     <svg style="position: absolute; width: 0; height: 0;">
         <defs>
@@ -385,31 +422,25 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>Source</label>
-                                    <select id="inlineSourceSelect" class="form-input liquid-glass">
-                                        <option value="">Choose source...</option>
-                                    </select>
+                                    <button type="button" class="selection-button" id="sourceSelectionBtn" onclick="showSourceSelection()">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z"/>
+                                        </svg>
+                                        <span id="sourceSelectionText">Choose source...</span>
+                                    </button>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label>Target</label>
-                                    <select id="inlineTargetSelect" class="form-input liquid-glass">
-                                        <option value="">Choose target...</option>
-                                    </select>
+                                    <button type="button" class="selection-button" id="targetSelectionBtn" onclick="showTargetSelection()">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-3-3-3 3v-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h2m0-4v4m0 0h6m-6 0H9"/>
+                                        </svg>
+                                        <span id="targetSelectionText">Choose target...</span>
+                                    </button>
                                 </div>
                             </div>
                             
-                            <div class="form-group">
-                                <label>Credentials & Integrations</label>
-                                <div class="mention-input-wrapper">
-                                    <input type="text" id="credentialMentions" placeholder="Type @ to add credentials (e.g., @jira-prod @slack-team)" class="form-input liquid-glass mention-input">
-                                    <div class="mention-suggestions" id="mentionSuggestions" style="display: none;">
-                                        <!-- Suggestions will appear here -->
-                                    </div>
-                                </div>
-                                <div class="selected-credentials" id="selectedCredentials">
-                                    <!-- Selected credentials will appear as chips here -->
-                                </div>
-                            </div>
                             
                             <div class="form-actions">
                                 <button class="btn btn-secondary" onclick="cancelInlineJob()">Cancel</button>
@@ -431,7 +462,11 @@
                                 Back to Jobs
                             </button>
                             <div class="timeline-title-section">
-                                <div class="timeline-icon">⚡</div>
+                                <div class="timeline-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
                                 <div>
                                     <h2 id="inlineJobDetailName">Migration Timeline</h2>
                                     <p id="inlineJobDetailDescription">Track your migration progress</p>
@@ -439,25 +474,25 @@
                             </div>
                         </div>
                         
-                        <div class="job-detail-tabs">
-                            <div class="tab-buttons">
-                                <button class="tab-button active" onclick="switchJobDetailTab('timeline')">Timeline</button>
-                                <button class="tab-button" onclick="switchJobDetailTab('configuration')">Configuration</button>
-                            </div>
-                        </div>
                         
                         <div class="timeline-body" id="timelineTabContent">
                             <div class="timeline-meta">
                                 <div class="meta-pill">
-                                    <span class="meta-icon">📁</span>
+                                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z"/>
+                                    </svg>
                                     <span id="inlineJobDetailSource">Source</span>
                                 </div>
                                 <div class="meta-pill">
-                                    <span class="meta-icon">🎯</span>
+                                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-3-3-3 3v-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h2m0-4v4m0 0h6m-6 0H9"/>
+                                    </svg>
                                     <span id="inlineJobDetailTarget">Target</span>
                                 </div>
                                 <div class="meta-pill">
-                                    <span class="meta-icon">📅</span>
+                                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
                                     <span id="inlineJobDetailCreated">Created</span>
                                 </div>
                             </div>
@@ -471,105 +506,6 @@
                             </div>
                         </div>
                         
-                        <div class="configuration-body" id="configurationTabContent" style="display: none;">
-                            <div class="config-section">
-                                <h4>Global Integration Settings</h4>
-                                <div class="integration-cards">
-                                    <div class="integration-card" data-integration="jira">
-                                        <div class="integration-header">
-                                            <span class="integration-icon">🎫</span>
-                                            <h5>Jira Integration</h5>
-                                            <label class="toggle-switch">
-                                                <input type="checkbox" id="jiraEnabled" onchange="toggleIntegration('jira')">
-                                                <span class="toggle-slider"></span>
-                                            </label>
-                                        </div>
-                                        <div class="integration-content" id="jiraConfig" style="display: none;">
-                                            <div class="form-group">
-                                                <label>Jira URL</label>
-                                                <input type="text" id="jiraUrl" placeholder="https://company.atlassian.net" class="form-input">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Project Key</label>
-                                                <input type="text" id="jiraProjectKey" placeholder="MIGRATE" class="form-input">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>API Token</label>
-                                                <input type="password" id="jiraAuth" placeholder="Enter API token" class="form-input">
-                                            </div>
-                                            <button class="btn btn-sm btn-secondary" onclick="testIntegration('jira')">Test Connection</button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="integration-card" data-integration="slack">
-                                        <div class="integration-header">
-                                            <span class="integration-icon">💬</span>
-                                            <h5>Slack Integration</h5>
-                                            <label class="toggle-switch">
-                                                <input type="checkbox" id="slackEnabled" onchange="toggleIntegration('slack')">
-                                                <span class="toggle-slider"></span>
-                                            </label>
-                                        </div>
-                                        <div class="integration-content" id="slackConfig" style="display: none;">
-                                            <div class="form-group">
-                                                <label>Webhook URL</label>
-                                                <input type="password" id="slackWebhook" placeholder="https://hooks.slack.com/..." class="form-input">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Default Channel</label>
-                                                <input type="text" id="slackChannel" placeholder="#migrations" class="form-input">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Alert Channel</label>
-                                                <input type="text" id="slackAlertChannel" placeholder="#migration-alerts" class="form-input">
-                                            </div>
-                                            <button class="btn btn-sm btn-secondary" onclick="testIntegration('slack')">Test Connection</button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="integration-card" data-integration="email">
-                                        <div class="integration-header">
-                                            <span class="integration-icon">📧</span>
-                                            <h5>Email Integration</h5>
-                                            <label class="toggle-switch">
-                                                <input type="checkbox" id="emailEnabled" onchange="toggleIntegration('email')">
-                                                <span class="toggle-slider"></span>
-                                            </label>
-                                        </div>
-                                        <div class="integration-content" id="emailConfig" style="display: none;">
-                                            <div class="form-group">
-                                                <label>SMTP Host</label>
-                                                <input type="text" id="emailHost" placeholder="smtp.company.com" class="form-input">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>SMTP Port</label>
-                                                <input type="number" id="emailPort" placeholder="587" class="form-input">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>From Address</label>
-                                                <input type="email" id="emailFrom" placeholder="migrations@company.com" class="form-input">
-                                            </div>
-                                            <button class="btn btn-sm btn-secondary" onclick="testIntegration('email')">Test Connection</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="config-actions">
-                                    <button class="btn btn-primary" onclick="saveJobConfiguration()">
-                                        <span id="saveConfigBtnText">Save Configuration</span>
-                                        <div class="spinner" id="saveConfigSpinner" style="display: none;"></div>
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="loadConfigurationTemplate()">Load Template</button>
-                                </div>
-                            </div>
-                            
-                            <div class="config-section">
-                                <h4>Stage-Specific Configuration</h4>
-                                <div class="stage-config-list" id="stageConfigList">
-                                    <!-- Stage configurations will be loaded here -->
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 

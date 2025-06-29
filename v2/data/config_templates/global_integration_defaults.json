@@ -1,0 +1,25 @@
+{
+  "id": "global_integration_defaults",
+  "name": "Default Integration Settings",
+  "type": "global",
+  "version": "1.0",
+  "config": {
+    "jira": {
+      "url": "https://company.atlassian.net",
+      "project_key": "MIGRATE",
+      "issue_type": "Task",
+      "priority": "Medium"
+    },
+    "slack": {
+      "default_channel": "#migrations",
+      "error_channel": "#migration-alerts",
+      "mention_on_error": "@migration-team"
+    },
+    "email": {
+      "from_address": "migrations@company.com",
+      "smtp_host": "smtp.company.com",
+      "smtp_port": 587,
+      "use_tls": true
+    }
+  }
+}

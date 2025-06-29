@@ -1862,230 +1862,37 @@ async function showNewJobModal() {
         document.getElementById('jobsTableContainer').style.display = 'none';
         document.getElementById('inlineCreateJob').style.display = 'block';
         
-        // Load sources and targets
-        await Promise.all([loadInlineJobSources(), loadInlineJobTargets()]);
+        // Hide the page header and filters
+        const pageHeader = document.querySelector('#jobsPage .page-header');
+        const jobsFilters = document.querySelector('#jobsPage .jobs-filters');
+        if (pageHeader) pageHeader.style.display = 'none';
+        if (jobsFilters) jobsFilters.style.display = 'none';
         
-        // Initialize @ mention system
-        initializeMentionSystem();
+        // Reset form
+        document.getElementById('inlineJobName').value = '';
+        document.getElementById('sourceSelectionBtn').classList.remove('selected');
+        document.getElementById('sourceSelectionText').textContent = 'Choose source...';
+        document.getElementById('sourceSelectionBtn').removeAttribute('data-source-id');
+        document.getElementById('sourceSelectionBtn').removeAttribute('data-source-name');
+        document.getElementById('sourceSelectionBtn').removeAttribute('data-source-type');
+        
+        document.getElementById('targetSelectionBtn').classList.remove('selected');
+        document.getElementById('targetSelectionText').textContent = 'Choose target...';
+        document.getElementById('targetSelectionBtn').removeAttribute('data-target-id');
+        document.getElementById('targetSelectionBtn').removeAttribute('data-target-name');
+        
     } catch (error) {
         console.error('Error showing inline job form:', error);
         showNotification('Failed to load job creation form', 'error');
     }
 }
 
-// @ Mention System
-let selectedCredentials = [];
-let mentionSuggestions = [];
-let currentMentionIndex = 0;
-
-function initializeMentionSystem() {
-    const input = document.getElementById('credentialMentions');
-    const suggestionsDiv = document.getElementById('mentionSuggestions');
-    selectedCredentials = [];
-    updateSelectedCredentialsDisplay();
-    
-    input.addEventListener('input', handleMentionInput);
-    input.addEventListener('keydown', handleMentionKeydown);
-    
-    // Click outside to close suggestions
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.mention-input-wrapper')) {
-            suggestionsDiv.style.display = 'none';
-        }
-    });
-}
-
-async function handleMentionInput(e) {
-    const input = e.target;
-    const value = input.value;
-    const cursorPosition = input.selectionStart;
-    
-    // Find @ symbol before cursor
-    const textBeforeCursor = value.substring(0, cursorPosition);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    
-    if (lastAtIndex !== -1 && lastAtIndex === textBeforeCursor.length - 1 || 
-        (lastAtIndex !== -1 && !value.substring(lastAtIndex + 1, cursorPosition).includes(' '))) {
-        // Show suggestions
-        const query = value.substring(lastAtIndex + 1, cursorPosition);
-        await showMentionSuggestions(query);
-    } else {
-        // Hide suggestions
-        document.getElementById('mentionSuggestions').style.display = 'none';
-    }
-}
-
-async function showMentionSuggestions(query) {
-    try {
-        const response = await fetch(`/api/credentials/search?q=${query}`);
-        const credentials = await response.json();
-        
-        // Filter out already selected credentials
-        mentionSuggestions = credentials.filter(cred => 
-            !selectedCredentials.find(selected => selected.id === cred.id)
-        );
-        
-        const suggestionsDiv = document.getElementById('mentionSuggestions');
-        
-        if (mentionSuggestions.length > 0) {
-            currentMentionIndex = 0;
-            suggestionsDiv.innerHTML = mentionSuggestions.map((cred, index) => `
-                <div class="mention-suggestion ${index === 0 ? 'active' : ''}" 
-                     data-index="${index}"
-                     onclick="selectMention(${index})">
-                    <span class="mention-icon">${cred.icon}</span>
-                    <div class="mention-info">
-                        <div class="mention-name">@${cred.name}</div>
-                        <div class="mention-type">${cred.type}</div>
-                    </div>
-                </div>
-            `).join('');
-            suggestionsDiv.style.display = 'block';
-        } else {
-            suggestionsDiv.style.display = 'none';
-        }
-    } catch (error) {
-        console.error('Error loading mention suggestions:', error);
-    }
-}
-
-function handleMentionKeydown(e) {
-    const suggestionsDiv = document.getElementById('mentionSuggestions');
-    if (suggestionsDiv.style.display === 'none') return;
-    
-    switch (e.key) {
-        case 'ArrowDown':
-            e.preventDefault();
-            currentMentionIndex = Math.min(currentMentionIndex + 1, mentionSuggestions.length - 1);
-            updateMentionHighlight();
-            break;
-        case 'ArrowUp':
-            e.preventDefault();
-            currentMentionIndex = Math.max(currentMentionIndex - 1, 0);
-            updateMentionHighlight();
-            break;
-        case 'Enter':
-            e.preventDefault();
-            if (mentionSuggestions.length > 0) {
-                selectMention(currentMentionIndex);
-            }
-            break;
-        case 'Escape':
-            suggestionsDiv.style.display = 'none';
-            break;
-    }
-}
-
-function updateMentionHighlight() {
-    document.querySelectorAll('.mention-suggestion').forEach((elem, index) => {
-        elem.classList.toggle('active', index === currentMentionIndex);
-    });
-}
-
-function selectMention(index) {
-    const credential = mentionSuggestions[index];
-    const input = document.getElementById('credentialMentions');
-    const value = input.value;
-    const cursorPosition = input.selectionStart;
-    
-    // Find @ symbol before cursor
-    const textBeforeCursor = value.substring(0, cursorPosition);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    
-    // Replace the @ mention with empty string
-    input.value = value.substring(0, lastAtIndex) + value.substring(cursorPosition);
-    
-    // Add to selected credentials
-    selectedCredentials.push(credential);
-    updateSelectedCredentialsDisplay();
-    
-    // Hide suggestions
-    document.getElementById('mentionSuggestions').style.display = 'none';
-    
-    // Focus back on input
-    input.focus();
-}
-
-function updateSelectedCredentialsDisplay() {
-    const container = document.getElementById('selectedCredentials');
-    container.innerHTML = selectedCredentials.map(cred => `
-        <div class="credential-chip">
-            <span class="credential-chip-icon">${cred.icon}</span>
-            <span>@${cred.name}</span>
-            <button class="credential-chip-remove" onclick="removeCredential('${cred.id}')">&times;</button>
-        </div>
-    `).join('');
-}
-
-function removeCredential(credentialId) {
-    selectedCredentials = selectedCredentials.filter(cred => cred.id !== credentialId);
-    updateSelectedCredentialsDisplay();
-}
-
-// Load Sources for Inline Job Form
-async function loadInlineJobSources() {
-    try {
-        const response = await fetch('/api/sources');
-        const sources = await response.json();
-        
-        const select = document.getElementById('inlineSourceSelect');
-        select.innerHTML = '<option value="">Choose source...</option>';
-        
-        sources.forEach(source => {
-            const option = document.createElement('option');
-            option.value = source.id;
-            option.textContent = `${source.name} (${source.type})`;
-            option.dataset.name = source.name;
-            select.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error loading sources for inline job form:', error);
-    }
-}
-
-// Load Targets for Inline Job Form
-async function loadInlineJobTargets() {
-    try {
-        const response = await fetch('/api/targets');
-        const targets = await response.json();
-        
-        const select = document.getElementById('inlineTargetSelect');
-        select.innerHTML = '<option value="">Choose target...</option>';
-        
-        targets.forEach(target => {
-            const option = document.createElement('option');
-            option.value = target.id;
-            option.textContent = target.name;
-            option.dataset.name = target.name;
-            select.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error loading targets for inline job form:', error);
-    }
-}
-
-// Cancel Inline Job Form
-function cancelInlineJob() {
-    // Show jobs table and hide inline form
-    document.getElementById('jobsTableContainer').style.display = 'block';
-    document.getElementById('inlineCreateJob').style.display = 'none';
-    
-    // Reset form
-    document.getElementById('inlineJobName').value = '';
-    document.getElementById('inlineSourceSelect').value = '';
-    document.getElementById('inlineTargetSelect').value = '';
-    
-    // Clear selected credentials
-    selectedCredentials = [];
-    document.getElementById('selectedCredentials').innerHTML = '';
-    document.getElementById('credentialMentions').value = '';
-}
 
 // Save Inline Job
 async function saveInlineJob() {
     const nameInput = document.getElementById('inlineJobName');
-    const sourceSelect = document.getElementById('inlineSourceSelect');
-    const targetSelect = document.getElementById('inlineTargetSelect');
+    const sourceBtn = document.getElementById('sourceSelectionBtn');
+    const targetBtn = document.getElementById('targetSelectionBtn');
     
     // Validate required fields
     if (!nameInput.value.trim()) {
@@ -2094,15 +1901,13 @@ async function saveInlineJob() {
         return;
     }
     
-    if (!sourceSelect.value) {
+    if (!sourceBtn.dataset.sourceId) {
         showNotification('Please select a source repository', 'error');
-        sourceSelect.focus();
         return;
     }
     
-    if (!targetSelect.value) {
+    if (!targetBtn.dataset.targetId) {
         showNotification('Please select a target platform', 'error');
-        targetSelect.focus();
         return;
     }
     
@@ -2115,18 +1920,13 @@ async function saveInlineJob() {
     try {
         const jobData = {
             name: nameInput.value.trim(),
-            description: `${sourceSelect.options[sourceSelect.selectedIndex].dataset.name} to ${targetSelect.options[targetSelect.selectedIndex].dataset.name} migration`,
-            source_id: sourceSelect.value,
-            source_name: sourceSelect.options[sourceSelect.selectedIndex].dataset.name,
-            target_id: targetSelect.value,
-            target_name: targetSelect.options[targetSelect.selectedIndex].dataset.name,
+            description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
+            source_id: sourceBtn.dataset.sourceId,
+            source_name: sourceBtn.dataset.sourceName,
+            target_id: targetBtn.dataset.targetId,
+            target_name: targetBtn.dataset.targetName,
             config: {
-                priority: 'medium',
-                credentials: selectedCredentials.map(cred => ({
-                    id: cred.id,
-                    name: cred.name,
-                    type: cred.type
-                }))
+                priority: 'medium'
             },
             created_by: 'system'
         };
@@ -2144,14 +1944,15 @@ async function saveInlineJob() {
         if (response.ok) {
             showNotification('Migration job created successfully!', 'success');
             
-            // Reset form and show jobs table
-            cancelInlineJob();
+            // Reset form
+            nameInput.value = '';
+            document.getElementById('sourceSelectionBtn').classList.remove('selected');
+            document.getElementById('sourceSelectionText').textContent = 'Choose source...';
+            document.getElementById('targetSelectionBtn').classList.remove('selected');
+            document.getElementById('targetSelectionText').textContent = 'Choose target...';
             
-            // Reload jobs
-            await loadJobs();
-            
-            // Show job detail modal after a brief delay
-            setTimeout(() => showJobDetail(result.id), 500);
+            // Show job detail view directly
+            await showInlineJobDetail(result.id);
         } else {
             showNotification(result.error || 'Failed to create job', 'error');
         }
@@ -2165,15 +1966,135 @@ async function saveInlineJob() {
     }
 }
 
+// Show source selection modal
+async function showSourceSelection() {
+    const modal = document.getElementById('sourceSelectionModal');
+    const grid = document.getElementById('sourceSelectionGrid');
+    
+    try {
+        const response = await fetch('/api/sources');
+        const sources = await response.json();
+        
+        grid.innerHTML = sources.map(source => `
+            <div class="selection-card" onclick="selectSource('${source.id}', '${source.name}', '${source.type}')">
+                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    ${source.type === 'github' ? 
+                        '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>' :
+                        '<path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z"/>'
+                    }
+                </svg>
+                <div class="selection-card-name">${source.name}</div>
+                <div class="selection-card-description">${source.type === 'github' ? 'GitHub Repository' : 'Local Folder'}</div>
+            </div>
+        `).join('');
+        
+        modal.classList.add('show');
+    } catch (error) {
+        console.error('Error loading sources:', error);
+        showNotification('Failed to load sources', 'error');
+    }
+}
+
+// Show target selection modal
+async function showTargetSelection() {
+    const modal = document.getElementById('targetSelectionModal');
+    const grid = document.getElementById('targetSelectionGrid');
+    
+    try {
+        const response = await fetch('/api/targets');
+        const targets = await response.json();
+        
+        grid.innerHTML = targets.map(target => `
+            <div class="selection-card" onclick="selectTarget('${target.id}', '${target.name}')">
+                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    ${getTargetIcon(target.type)}
+                </svg>
+                <div class="selection-card-name">${target.name}</div>
+                <div class="selection-card-description">${target.description || target.type}</div>
+            </div>
+        `).join('');
+        
+        modal.classList.add('show');
+    } catch (error) {
+        console.error('Error loading targets:', error);
+        showNotification('Failed to load targets', 'error');
+    }
+}
+
+// Get target icon SVG path
+function getTargetIcon(type) {
+    const icons = {
+        'sage_it': '<path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>',
+        'aws_lambda': '<path d="M13 10V3L4 14h7v7l9-11h-7z"/>',
+        'kubernetes': '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
+        'docker': '<path d="M19 9h-4V3h-6v6H5l-3 3h22l-3-3z M12 6h2v3h-2V6z M8 6h2v3H8V6z M16 11H8v3h8v-3z M20 11h2v3h-2v-3z M4 11h2v3H4v-3z"/>'
+    };
+    return icons[type] || '<path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-3-3-3 3v-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h2m0-4v4m0 0h6m-6 0H9"/>';
+}
+
+// Select source
+function selectSource(id, name, type) {
+    const btn = document.getElementById('sourceSelectionBtn');
+    const text = document.getElementById('sourceSelectionText');
+    
+    btn.classList.add('selected');
+    text.textContent = name;
+    btn.dataset.sourceId = id;
+    btn.dataset.sourceName = name;
+    btn.dataset.sourceType = type;
+    
+    closeSelectionModal('source');
+}
+
+// Select target
+function selectTarget(id, name) {
+    const btn = document.getElementById('targetSelectionBtn');
+    const text = document.getElementById('targetSelectionText');
+    
+    btn.classList.add('selected');
+    text.textContent = name;
+    btn.dataset.targetId = id;
+    btn.dataset.targetName = name;
+    
+    closeSelectionModal('target');
+}
+
+// Close selection modal
+function closeSelectionModal(type) {
+    const modal = document.getElementById(`${type}SelectionModal`);
+    modal.classList.remove('show');
+}
+
 // Load Create Job Page
 async function loadCreateJobPage() {
     try {
-        // Load sources and targets for the create job page
-        await Promise.all([loadCreateJobSources(), loadCreateJobTargets()]);
+        // Reset form
+        document.getElementById('inlineJobName').value = '';
+        document.getElementById('sourceSelectionBtn').classList.remove('selected');
+        document.getElementById('sourceSelectionText').textContent = 'Choose source...';
+        document.getElementById('targetSelectionBtn').classList.remove('selected');
+        document.getElementById('targetSelectionText').textContent = 'Choose target...';
     } catch (error) {
         console.error('Error loading create job page:', error);
         showNotification('Failed to load job creation page', 'error');
     }
+}
+
+// Cancel inline job creation
+function cancelInlineJob() {
+    document.getElementById('inlineCreateJob').style.display = 'none';
+    document.getElementById('jobsTableContainer').style.display = 'block';
+    document.getElementById('inlineJobName').value = '';
+    document.getElementById('sourceSelectionBtn').classList.remove('selected');
+    document.getElementById('sourceSelectionText').textContent = 'Choose source...';
+    document.getElementById('targetSelectionBtn').classList.remove('selected');
+    document.getElementById('targetSelectionText').textContent = 'Choose target...';
+    
+    // Ensure page header and filters are visible
+    const pageHeader = document.querySelector('#jobsPage .page-header');
+    const jobsFilters = document.querySelector('#jobsPage .jobs-filters');
+    if (pageHeader) pageHeader.style.display = 'flex';
+    if (jobsFilters) jobsFilters.style.display = 'flex';
 }
 
 // Load Sources for Create Job Page
@@ -2445,6 +2366,12 @@ async function showInlineJobDetail(jobId) {
         document.getElementById('inlineCreateJob').style.display = 'none';
         document.getElementById('inlineJobDetail').style.display = 'block';
         
+        // Hide the page header and filters
+        const pageHeader = document.querySelector('#jobsPage .page-header');
+        const jobsFilters = document.querySelector('#jobsPage .jobs-filters');
+        if (pageHeader) pageHeader.style.display = 'none';
+        if (jobsFilters) jobsFilters.style.display = 'none';
+        
         // Populate timeline details
         document.getElementById('inlineJobDetailName').textContent = job.name;
         document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your migration progress step by step';
@@ -2488,6 +2415,15 @@ async function showInlineJobDetail(jobId) {
 function closeInlineJobDetail() {
     document.getElementById('inlineJobDetail').style.display = 'none';
     document.getElementById('jobsTableContainer').style.display = 'block';
+    
+    // Show the page header and filters again
+    const pageHeader = document.querySelector('#jobsPage .page-header');
+    const jobsFilters = document.querySelector('#jobsPage .jobs-filters');
+    if (pageHeader) pageHeader.style.display = 'flex';
+    if (jobsFilters) jobsFilters.style.display = 'flex';
+    
+    // Reload jobs to get fresh data
+    loadJobs();
 }
 
 // Show Job Detail Modal (keeping for backward compatibility)
@@ -2529,7 +2465,10 @@ function renderJobStages(stages, currentStage) {
                 <div class="timeline-agents">
                     ${stage.agents.map(agent => `
                         <div class="timeline-agent">
-                            <span>👤</span>
+                            <svg class="agent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
                             <span>${agent}</span>
                         </div>
                     `).join('')}
@@ -2572,59 +2511,44 @@ function renderInlineJobStages(stages, currentStage) {
         const timelineItem = document.createElement('div');
         timelineItem.className = `timeline-item ${stage.status.replace('_', '-')}`;
         
-        // Determine which credential type this stage might need
-        const stageCredentialTypes = getStageCredentialTypes(stage.id);
-        
         timelineItem.innerHTML = `
             <div class="timeline-card">
                 <div class="timeline-card-header">
-                    <div class="stage-header-content">
-                        <h3 class="timeline-stage-title">${stage.name}</h3>
-                        <button class="stage-configure-btn" onclick="configureStage('${stage.id}', '${stage.name}')" title="Configure this stage">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            </svg>
-                        </button>
-                    </div>
+                    <h3 class="timeline-stage-title">${stage.name}</h3>
                     <span class="timeline-status ${stage.status.replace('_', '-')}">${stage.status.replace('_', ' ')}</span>
                 </div>
                 
                 <p class="timeline-description">${stage.description}</p>
                 
-                ${stage.credentials && stage.credentials.length > 0 ? `
-                    <div class="stage-credentials">
-                        <div class="stage-credential-label">Connected Credentials:</div>
-                        <div class="stage-credential-list">
-                            ${stage.credentials.map(cred => `
-                                <div class="stage-credential-chip">
-                                    <span class="credential-icon">${getCredentialIcon(cred.type)}</span>
-                                    <span>${cred.name}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : stageCredentialTypes.length > 0 ? `
-                    <div class="stage-credentials-needed">
-                        <span class="warning-icon">⚠️</span>
-                        <span>Credentials needed: ${stageCredentialTypes.join(', ')}</span>
-                    </div>
-                ` : ''}
-                
                 <div class="timeline-agents">
                     ${stage.agents.map(agent => `
                         <div class="timeline-agent">
-                            <span>👤</span>
+                            <svg class="agent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
                             <span>${agent}</span>
                         </div>
                     `).join('')}
                 </div>
                 
                 <div class="timeline-tasks">
-                    ${stage.tasks.map(task => `
-                        <div class="timeline-task">
-                            <div class="task-status-dot ${task.status.replace('_', '-')}"></div>
-                            <span class="task-name">${task.name}</span>
-                            <span class="task-agent">${task.agent}</span>
+                    ${stage.tasks.map((task, taskIndex) => `
+                        <div class="timeline-task-container" id="task_${stage.id}_${taskIndex}">
+                            <div class="timeline-task" onclick="toggleTaskConfig('${stage.id}', ${taskIndex})">
+                                <div class="task-status-dot ${task.status.replace('_', '-')}"></div>
+                                <span class="task-name">${task.name}</span>
+                                <span class="task-agent">${task.agent}</span>
+                                <button class="task-config-toggle" onclick="event.stopPropagation(); toggleTaskConfig('${stage.id}', ${taskIndex})" title="Configure">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div class="task-config-section" id="taskConfig_${stage.id}_${taskIndex}" style="display: none;">
+                                ${renderTaskConfiguration(stage.id, taskIndex, task, getTaskConnectionRequirements(task.name))}
+                            </div>
                         </div>
                     `).join('')}
                 </div>
@@ -2681,56 +2605,256 @@ async function refreshJobDetail() {
     }
 }
 
-// Helper function to determine credential types needed for a stage
-function getStageCredentialTypes(stageId) {
-    const credentialMapping = {
-        'project_setup': ['jira', 'slack', 'email'],
-        'code_analysis': ['github'],
-        'sprint_planning': ['jira'],
-        'code_migration': ['github'],
-        'validation_fix': ['github'],
-        'post_processing': ['jira', 'slack'],
-        'deployment': ['github', 'slack'],
-        'knowledge_transfer': ['slack', 'email']
+// Helper function to determine credential type for a specific task
+function getTaskConnectionRequirements(taskName) {
+    const taskConnectionMapping = {
+        // Project Setup tasks
+        'Create Jira Epic': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Create Initial Tickets': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Send Kickoff Email': { type: 'email', required: true, label: 'Email Connection' },
+        'Send Slack Notification': { type: 'slack', required: true, label: 'Slack Connection' },
+        'Setup Sprint Structure': { type: 'jira', required: true, label: 'Jira Connection' },
+        
+        // Code Analysis tasks
+        'Analyze Source Structure': { type: 'github', required: false, label: 'GitHub Connection (Optional for private repos)' },
+        'Identify Dependencies': { type: 'github', required: false, label: 'GitHub Connection (Optional for private repos)' },
+        'Create Migration Plan': null,
+        'Document Architecture': null,
+        'Update Jira with Findings': { type: 'jira', required: true, label: 'Jira Connection' },
+        
+        // Sprint Planning tasks
+        'Create Sprint Backlog': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Estimate Story Points': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Assign Sprint Goals': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Update Jira Board': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Schedule Sprint Ceremonies': { type: 'jira', required: true, label: 'Jira Connection' },
+        
+        // Code Migration tasks
+        'Setup Target Environment': null,
+        'Migrate Core Components': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Transform Business Logic': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Update Dependencies': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Daily Standup Updates': { type: 'slack', required: true, label: 'Slack Connection' },
+        
+        // Validation & Fix tasks
+        'Run Test Suite': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Validate Functionality': null,
+        'Fix Migration Issues': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Update Tests': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Document Fixes': { type: 'jira', required: true, label: 'Jira Connection' },
+        
+        // Post Processing tasks
+        'Create Documentation': null,
+        'Update Jira Tickets': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Send Progress Report': { type: 'email', required: true, label: 'Email Connection' },
+        'Archive Sprint': { type: 'jira', required: true, label: 'Jira Connection' },
+        'Notify Stakeholders': { type: 'slack', required: true, label: 'Slack Connection' },
+        
+        // Deployment tasks
+        'Prepare Deployment': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Deploy to Staging': { type: 'aws', required: true, label: 'AWS Credentials' },
+        'Run Integration Tests': { type: 'github', required: false, label: 'GitHub Connection (Optional)' },
+        'Deploy to Production': { type: 'aws', required: true, label: 'AWS Credentials' },
+        'Send Deployment Notice': { type: 'slack', required: true, label: 'Slack Connection' },
+        
+        // Knowledge Transfer tasks
+        'Create Training Materials': null,
+        'Schedule Training Sessions': { type: 'email', required: true, label: 'Email Connection' },
+        'Conduct Knowledge Transfer': null,
+        'Document Best Practices': null,
+        'Send Completion Report': { type: 'email', required: true, label: 'Email Connection' }
     };
     
-    return credentialMapping[stageId] || [];
+    return taskConnectionMapping[taskName] || null;
 }
 
-// Configure stage credentials
-async function configureStage(stageId, stageName) {
-    // Get current job ID
+// Toggle task configuration section
+function toggleTaskConfig(stageId, taskIndex) {
+    const configSection = document.getElementById(`taskConfig_${stageId}_${taskIndex}`);
+    const toggleBtn = document.querySelector(`#task_${stageId}_${taskIndex} .task-config-toggle svg`);
+    
+    if (configSection.style.display === 'none') {
+        configSection.style.display = 'block';
+        toggleBtn.style.transform = 'rotate(180deg)';
+    } else {
+        configSection.style.display = 'none';
+        toggleBtn.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Render task configuration section
+function renderTaskConfiguration(stageId, taskIndex, task, connectionReq) {
+    const taskConfig = task.config || {};
+    const selectedCredential = taskConfig.credentialId || null;
+    const selectedCredentialName = taskConfig.credentialName || null;
+    
+    let configHTML = '<div class="task-config-content">';
+    
+    // Connection/Credential selection if needed
+    if (connectionReq) {
+        const isRequired = connectionReq.required ? '<span class="required-indicator">*</span>' : '<span class="optional-indicator">(Optional)</span>';
+        configHTML += `
+            <div class="task-config-field">
+                <label class="task-config-label">
+                    ${connectionReq.label} ${isRequired}
+                </label>
+                <button type="button" 
+                        class="task-selection-button ${selectedCredential ? 'selected' : ''}" 
+                        id="connBtn_${stageId}_${taskIndex}"
+                        onclick="showTaskConnectionSelection('${stageId}', ${taskIndex}, '${connectionReq.type}', '${connectionReq.label}')">
+                    ${getCredentialIcon(connectionReq.type)}
+                    <span id="connText_${stageId}_${taskIndex}">
+                        ${selectedCredentialName || `Select ${connectionReq.label}...`}
+                    </span>
+                    ${selectedCredential ? '<span class="selection-status">✓</span>' : ''}
+                </button>
+                ${!selectedCredential && connectionReq.required ? '<small class="field-error">This connection is required for this task</small>' : ''}
+            </div>
+        `;
+    }
+    
+    // Task-specific configuration
+    if (task.name.includes('Email')) {
+        configHTML += `
+            <div class="task-config-field">
+                <label class="task-config-label">Recipients</label>
+                <input type="text" 
+                       class="form-input liquid-glass" 
+                       id="taskRecipients_${stageId}_${taskIndex}"
+                       placeholder="email1@company.com, email2@company.com"
+                       value="${taskConfig.recipients || ''}"
+                       onchange="updateTaskConfig('${stageId}', ${taskIndex}, 'recipients', this.value)">
+                <small class="form-hint">Comma-separated email addresses</small>
+            </div>
+        `;
+    }
+    
+    if (task.name.includes('Slack') || task.name.includes('Notification')) {
+        configHTML += `
+            <div class="task-config-field">
+                <label class="task-config-label">Channel</label>
+                <input type="text" 
+                       class="form-input liquid-glass" 
+                       id="taskChannel_${stageId}_${taskIndex}"
+                       placeholder="#general"
+                       value="${taskConfig.channel || ''}"
+                       onchange="updateTaskConfig('${stageId}', ${taskIndex}, 'channel', this.value)">
+            </div>
+        `;
+    }
+    
+    if (task.name.includes('Jira')) {
+        configHTML += `
+            <div class="task-config-field">
+                <label class="task-config-label">Ticket Type</label>
+                <select class="form-input liquid-glass task-select" 
+                        id="taskTicketType_${stageId}_${taskIndex}"
+                        onchange="updateTaskConfig('${stageId}', ${taskIndex}, 'ticketType', this.value)">
+                    <option value="epic" ${taskConfig.ticketType === 'epic' ? 'selected' : ''}>Epic</option>
+                    <option value="story" ${taskConfig.ticketType === 'story' ? 'selected' : ''}>Story</option>
+                    <option value="task" ${taskConfig.ticketType === 'task' ? 'selected' : ''}>Task</option>
+                    <option value="bug" ${taskConfig.ticketType === 'bug' ? 'selected' : ''}>Bug</option>
+                </select>
+            </div>
+        `;
+    }
+    
+    // Common options
+    configHTML += `
+        <div class="task-config-field">
+            <label class="task-checkbox-label" for="taskEnabled_${stageId}_${taskIndex}">
+                <input type="checkbox" 
+                       class="task-checkbox"
+                       id="taskEnabled_${stageId}_${taskIndex}"
+                       ${taskConfig.enabled !== false ? 'checked' : ''}
+                       onchange="updateTaskConfig('${stageId}', ${taskIndex}, 'enabled', this.checked)">
+                <span class="checkbox-custom"></span>
+                <span>Enable this task</span>
+            </label>
+        </div>
+    `;
+    
+    configHTML += '</div>';
+    
+    // Load credentials after a delay to ensure DOM is ready
+    if (connectionReq) {
+        setTimeout(() => loadTaskCredentials(stageId, taskIndex, connectionReq.type), 100);
+    }
+    
+    return configHTML;
+}
+
+// Load credentials for a specific task
+async function loadTaskCredentials(stageId, taskIndex, credentialType) {
+    try {
+        const response = await fetch('/api/credentials');
+        const allCredentials = await response.json();
+        
+        const typeCredentials = allCredentials.filter(cred => cred.type === credentialType);
+        const select = document.getElementById(`taskCred_${stageId}_${taskIndex}`);
+        
+        if (select) {
+            const connectionReq = getTaskConnectionRequirements(document.querySelector(`#task_${stageId}_${taskIndex} .task-name`).textContent);
+            const label = connectionReq ? connectionReq.label : `${credentialType} credential`;
+            
+            select.innerHTML = `<option value="">Select ${label}...</option>`;
+            typeCredentials.forEach(cred => {
+                const option = document.createElement('option');
+                option.value = cred.id;
+                option.textContent = `${cred.name} ${cred.status === 'active' ? '✓' : '⚠️'}`;
+                select.appendChild(option);
+            });
+            
+            // Set selected value if exists
+            const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+            const jobResponse = await fetch(`/api/jobs/${jobId}`);
+            const job = await jobResponse.json();
+            
+            const stage = job.stages?.find(s => s.id === stageId);
+            if (stage && stage.tasks[taskIndex]?.config?.credentialId) {
+                select.value = stage.tasks[taskIndex].config.credentialId;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading task credentials:', error);
+    }
+}
+
+// Update task credential
+async function updateTaskCredential(stageId, taskIndex) {
+    const select = document.getElementById(`taskCred_${stageId}_${taskIndex}`);
+    const credentialId = select.value;
+    
+    await updateTaskConfig(stageId, taskIndex, 'credentialId', credentialId);
+}
+
+// Update task configuration
+async function updateTaskConfig(stageId, taskIndex, key, value) {
     const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
     if (!jobId) return;
     
-    // Get stage credential types
-    const credentialTypes = getStageCredentialTypes(stageId);
-    
-    // Show stage configuration modal
-    showStageConfigModal(jobId, stageId, stageName, credentialTypes);
-}
-
-// ===== CONFIGURATION FUNCTIONS =====
-
-// Switch job detail tabs
-function switchJobDetailTab(tabName) {
-    // Update tab buttons
-    document.querySelectorAll('.job-detail-tabs .tab-button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
-    
-    // Show/hide content
-    if (tabName === 'timeline') {
-        document.getElementById('timelineTabContent').style.display = 'block';
-        document.getElementById('configurationTabContent').style.display = 'none';
-    } else {
-        document.getElementById('timelineTabContent').style.display = 'none';
-        document.getElementById('configurationTabContent').style.display = 'block';
-        // Load configuration when switching to config tab
-        loadJobConfiguration();
+    try {
+        const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/config`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                [key]: value
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Task configuration updated', 'success');
+        } else {
+            showNotification('Failed to update task configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating task config:', error);
+        showNotification('Failed to update task configuration', 'error');
     }
 }
+
 
 // Load job configuration
 async function loadJobConfiguration() {
@@ -2805,7 +2929,7 @@ async function loadStageConfigurations(stageConfigs) {
                         ${config.enabled ? 'Configured' : 'Not configured'}
                     </div>
                 </div>
-                <button class="stage-config-action" onclick="editStageConfig('${stage.id}', '${stage.name}')">
+                <button class="stage-config-action" onclick="showNotification('Use inline configuration in the timeline view', 'info')">
                     ${config.enabled ? 'Edit' : 'Configure'}
                 </button>
             `;
@@ -2956,10 +3080,6 @@ async function saveJobConfiguration() {
 }
 
 // Edit stage configuration
-function editStageConfig(stageId, stageName) {
-    // This would open a modal or inline editor for stage-specific config
-    showNotification(`Stage configuration for ${stageName} - Coming soon!`, 'info');
-}
 
 // Load configuration template
 async function loadConfigurationTemplate() {
@@ -3385,14 +3505,15 @@ function getConnectionStatus(status) {
 
 function getCredentialIcon(type) {
     const icons = {
-        'jira': '🎫',
-        'slack': '💬',
-        'email': '📧',
-        'github': '🐙',
-        'teams': '👥',
-        'postgresql': '🐘'
+        'jira': '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18l-3 9 3 9H3l3-9z"/></svg>',
+        'slack': '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>',
+        'email': '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>',
+        'github': '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>',
+        'teams': '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>',
+        'postgresql': '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+        'aws': '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 18h20l-2-6 2-6H2l2 6z"/><path d="M6 12h12"/></svg>'
     };
-    return icons[type] || '🔑';
+    return icons[type] || '<svg class="credential-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>';
 }
 
 // Enhanced icons for connections
@@ -3495,165 +3616,7 @@ function deleteJob(jobId, jobName) {
 }
 
 // Show stage configuration modal
-async function showStageConfigModal(jobId, stageId, stageName, requiredTypes) {
-    // Create modal dynamically
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.id = 'stageConfigModal';
-    
-    // Load available credentials
-    const response = await fetch('/api/credentials');
-    const allCredentials = await response.json();
-    
-    // Load current job configuration
-    const jobResponse = await fetch(`/api/jobs/${jobId}`);
-    const job = await jobResponse.json();
-    const stageConfig = job.stages?.find(s => s.id === stageId);
-    const currentCredentials = stageConfig?.credentials || [];
-    
-    modal.innerHTML = `
-        <div class="modal-content credential-modal" style="max-width: 700px;">
-            <div class="credential-modal-header">
-                <h3>Configure ${stageName}</h3>
-                <button class="close-btn" onclick="closeModal('stageConfigModal')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="credential-modal-body">
-                <div class="stage-config-info">
-                    <p>This stage requires the following credential types:</p>
-                    <div class="required-types">
-                        ${requiredTypes.map(type => `
-                            <span class="required-type-badge">
-                                ${getCredentialIcon(type)}
-                                ${type.charAt(0).toUpperCase() + type.slice(1)}
-                            </span>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <div class="credential-selection">
-                    <h4>Select Credentials</h4>
-                    <div class="credential-selection-grid">
-                        ${requiredTypes.map(type => {
-                            const typeCredentials = allCredentials.filter(cred => cred.type === type);
-                            const selectedCred = currentCredentials.find(c => c.type === type);
-                            
-                            return `
-                                <div class="credential-type-section">
-                                    <label class="credential-type-label">
-                                        ${getCredentialIcon(type)}
-                                        ${type.charAt(0).toUpperCase() + type.slice(1)}
-                                    </label>
-                                    <select class="form-input" id="stage_cred_${type}" data-type="${type}">
-                                        <option value="">Select ${type} credential...</option>
-                                        ${typeCredentials.map(cred => `
-                                            <option value="${cred.id}" ${selectedCred?.id === cred.id ? 'selected' : ''}>
-                                                ${cred.name} ${cred.status === 'active' ? '✓' : '⚠️'}
-                                            </option>
-                                        `).join('')}
-                                    </select>
-                                    ${typeCredentials.length === 0 ? `
-                                        <div class="no-credentials-msg">
-                                            <span>No ${type} credentials available</span>
-                                            <button class="btn btn-sm btn-primary" onclick="showAddCredentialModal(); selectCredentialType('${type}');">
-                                                Add ${type} credential
-                                            </button>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-                
-                <div class="stage-additional-config">
-                    <h4>Additional Configuration</h4>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="stage_notify_on_start" ${stageConfig?.notify_on_start ? 'checked' : ''}>
-                            Send notification when stage starts
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="stage_notify_on_complete" ${stageConfig?.notify_on_complete ? 'checked' : ''}>
-                            Send notification when stage completes
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="stage_create_jira_ticket" ${stageConfig?.create_jira_ticket ? 'checked' : ''}>
-                            Create Jira ticket for this stage
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="credential-modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('stageConfigModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="saveStageConfig('${jobId}', '${stageId}')">
-                    Save Configuration
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    modal.classList.add('show');
-}
 
-// Save stage configuration
-async function saveStageConfig(jobId, stageId) {
-    const requiredTypes = getStageCredentialTypes(stageId);
-    const credentials = [];
-    
-    // Collect selected credentials
-    for (const type of requiredTypes) {
-        const select = document.getElementById(`stage_cred_${type}`);
-        if (select && select.value) {
-            credentials.push({
-                id: select.value,
-                type: type,
-                name: select.options[select.selectedIndex].text.split(' ')[0] // Get credential name
-            });
-        }
-    }
-    
-    // Collect additional config
-    const config = {
-        credentials: credentials,
-        notify_on_start: document.getElementById('stage_notify_on_start')?.checked || false,
-        notify_on_complete: document.getElementById('stage_notify_on_complete')?.checked || false,
-        create_jira_ticket: document.getElementById('stage_create_jira_ticket')?.checked || false
-    };
-    
-    try {
-        const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/config`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
-        
-        if (response.ok) {
-            showNotification('Stage configuration saved successfully', 'success');
-            closeModal('stageConfigModal');
-            // Refresh job detail
-            await showInlineJobDetail(jobId);
-        } else {
-            const error = await response.json();
-            showNotification(error.error || 'Failed to save configuration', 'error');
-        }
-    } catch (error) {
-        console.error('Error saving stage config:', error);
-        showNotification('Failed to save configuration', 'error');
-    }
-}
 
 // Helper to pre-select credential type when adding from stage config
 function selectCredentialType(type) {
@@ -3666,5 +3629,117 @@ function selectCredentialType(type) {
             }
         });
     }, 100);
+}
+
+// Show task connection selection modal
+async function showTaskConnectionSelection(stageId, taskIndex, credentialType, label) {
+    // Create or get modal
+    let modal = document.getElementById('taskConnectionModal');
+    if (!modal) {
+        // Create modal HTML
+        const modalHTML = `
+            <div id="taskConnectionModal" class="selection-modal">
+                <div class="selection-modal-content">
+                    <div class="selection-modal-header">
+                        <h3 id="taskConnectionModalTitle">Select Connection</h3>
+                        <button class="selection-modal-close" onclick="closeTaskConnectionModal()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="selection-modal-body">
+                        <div class="selection-grid" id="taskConnectionGrid">
+                            <!-- Connection cards will be populated here -->
+                        </div>
+                        <div class="selection-modal-footer">
+                            <button class="btn btn-secondary" onclick="closeTaskConnectionModal()">Cancel</button>
+                            <button class="btn btn-primary" onclick="showAddCredentialModal('${credentialType}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Add New ${label}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        modal = document.getElementById('taskConnectionModal');
+    }
+    
+    // Update modal title
+    document.getElementById('taskConnectionModalTitle').textContent = `Select ${label}`;
+    
+    // Store context for selection
+    modal.dataset.stageId = stageId;
+    modal.dataset.taskIndex = taskIndex;
+    modal.dataset.credentialType = credentialType;
+    
+    // Load and display connections
+    try {
+        const response = await fetch('/api/credentials');
+        const credentials = await response.json();
+        
+        const typeCredentials = credentials.filter(cred => cred.type === credentialType);
+        const grid = document.getElementById('taskConnectionGrid');
+        
+        if (typeCredentials.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="7" y="2" width="10" height="20" rx="2"/>
+                        <circle cx="12" cy="18" r="1"/>
+                    </svg>
+                    <p>No ${label} configured yet</p>
+                </div>
+            `;
+        } else {
+            grid.innerHTML = typeCredentials.map(cred => `
+                <div class="selection-card" onclick="selectTaskConnection('${cred.id}', '${cred.name}', '${stageId}', ${taskIndex})">
+                    ${getCredentialIcon(credentialType)}
+                    <div class="selection-card-name">${cred.name}</div>
+                    <div class="selection-card-description">
+                        <span class="connection-status ${cred.status || 'unknown'}">
+                            ${cred.status === 'active' ? 'Connected' : cred.status === 'error' ? 'Disconnected' : 'Not tested'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        modal.classList.add('show');
+    } catch (error) {
+        console.error('Error loading connections:', error);
+        showNotification('Failed to load connections', 'error');
+    }
+}
+
+// Select task connection
+async function selectTaskConnection(credentialId, credentialName, stageId, taskIndex) {
+    // Update button display
+    const btn = document.getElementById(`connBtn_${stageId}_${taskIndex}`);
+    const text = document.getElementById(`connText_${stageId}_${taskIndex}`);
+    
+    if (btn && text) {
+        btn.classList.add('selected');
+        text.textContent = credentialName;
+    }
+    
+    // Update task configuration
+    await updateTaskConfig(stageId, taskIndex, 'credentialId', credentialId);
+    await updateTaskConfig(stageId, taskIndex, 'credentialName', credentialName);
+    
+    // Close modal
+    closeTaskConnectionModal();
+}
+
+// Close task connection modal
+function closeTaskConnectionModal() {
+    const modal = document.getElementById('taskConnectionModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
 }
 

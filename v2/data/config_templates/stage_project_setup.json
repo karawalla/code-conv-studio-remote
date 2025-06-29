@@ -1,0 +1,43 @@
+{
+  "id": "stage_project_setup",
+  "name": "Project Setup Configuration",
+  "type": "stage",
+  "version": "1.0",
+  "config": {
+    "timeout_minutes": 30,
+    "retry_on_failure": true,
+    "integrations": {
+      "jira": {
+        "enabled": true,
+        "create_epic": true,
+        "epic_name_template": "{job_name} - Migration Epic",
+        "story_points": 8,
+        "labels": [
+          "migration",
+          "automated"
+        ],
+        "custom_fields": {}
+      },
+      "slack": {
+        "enabled": true,
+        "notify_on_start": true,
+        "notify_on_complete": true,
+        "message_template": "project_kickoff"
+      },
+      "email": {
+        "enabled": true,
+        "send_kickoff_email": true,
+        "template": "project_kickoff",
+        "recipient_groups": [
+          "stakeholders",
+          "team"
+        ]
+      }
+    },
+    "artifacts": {
+      "project_charter": true,
+      "wiki_page": true,
+      "team_roster": true
+    }
+  }
+}

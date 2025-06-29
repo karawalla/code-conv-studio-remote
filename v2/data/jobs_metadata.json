@@ -1,13 +1,13 @@
 {
   "jobs": {
-    "c50b10b2-482c-4315-8a10-349aaaaf60e8": {
-      "id": "c50b10b2-482c-4315-8a10-349aaaaf60e8",
-      "name": "py2java",
-      "description": "py2java",
+    "fd19a014-a052-4b0b-ba06-5aec7081a752": {
+      "id": "fd19a014-a052-4b0b-ba06-5aec7081a752",
+      "name": "java to rust",
+      "description": "spring-boot-examples to Rust migration",
       "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
       "source_name": "spring-boot-examples",
-      "target_id": "02d28552-5124-4930-af64-de851992a1bd",
-      "target_name": "Go",
+      "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
+      "target_name": "Rust",
       "status": "pending",
       "progress": 0,
       "stages": [
@@ -383,7 +383,8 @@
       "current_stage": 0,
       "total_stages": 8,
       "config": {
-        "priority": "medium"
+        "priority": "medium",
+        "credentials": []
       },
       "metadata": {
         "jira_epic": null,
@@ -398,16 +399,16 @@
       },
       "artifacts": [],
       "logs": [],
-      "created_at": "2025-06-27T11:00:24.125733",
-      "updated_at": "2025-06-27T11:00:24.125733",
+      "created_at": "2025-06-29T03:45:10.137147",
+      "updated_at": "2025-06-29T04:06:52.363480",
       "created_by": "system",
       "estimated_completion": null,
       "actual_completion": null
     },
-    "ba597ed1-ae4e-427d-9fcc-467fc35e8259": {
-      "id": "ba597ed1-ae4e-427d-9fcc-467fc35e8259",
-      "name": "Java2Python",
-      "description": "Java2Python",
+    "349bfe98-6fcd-4805-b928-20ac2cf04ba5": {
+      "id": "349bfe98-6fcd-4805-b928-20ac2cf04ba5",
+      "name": "Java to Python",
+      "description": "spring-boot-examples to Rust migration",
       "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
       "source_name": "spring-boot-examples",
       "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
@@ -802,420 +803,16 @@
       },
       "artifacts": [],
       "logs": [],
-      "created_at": "2025-06-27T17:26:29.432192",
-      "updated_at": "2025-06-27T17:26:29.432192",
+      "created_at": "2025-06-29T05:58:41.308841",
+      "updated_at": "2025-06-29T05:58:41.308841",
       "created_by": "system",
       "estimated_completion": null,
       "actual_completion": null
     },
-    "05c9e563-5fbe-4bb3-8992-6d8839a84470": {
-      "id": "05c9e563-5fbe-4bb3-8992-6d8839a84470",
-      "name": "java2python",
-      "description": "java2python",
-      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
-      "source_name": "spring-boot-examples",
-      "target_id": "02d28552-5124-4930-af64-de851992a1bd",
-      "target_name": "Go",
-      "status": "pending",
-      "progress": 0,
-      "stages": [
-        {
-          "id": "project_setup",
-          "name": "Project Setup",
-          "description": "Initialize project with Jira epic, tickets, and team notifications",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "Project Manager",
-            "Scrum Master"
-          ],
-          "capabilities": [
-            "jira_create",
-            "send_email",
-            "send_notification"
-          ],
-          "tasks": [
-            {
-              "name": "Create Jira Epic",
-              "status": "pending",
-              "agent": "Project Manager"
-            },
-            {
-              "name": "Create Initial Tickets",
-              "status": "pending",
-              "agent": "Project Manager"
-            },
-            {
-              "name": "Send Kickoff Email",
-              "status": "pending",
-              "agent": "Project Manager"
-            },
-            {
-              "name": "Send Slack Notification",
-              "status": "pending",
-              "agent": "Project Manager"
-            },
-            {
-              "name": "Setup Sprint Structure",
-              "status": "pending",
-              "agent": "Scrum Master"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "id": "code_analysis",
-          "name": "Code Analysis & Planning",
-          "description": "Analyze source code and create migration plan",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "Code Architect"
-          ],
-          "capabilities": [
-            "analyze",
-            "plan",
-            "document_architecture"
-          ],
-          "tasks": [
-            {
-              "name": "Analyze Source Structure",
-              "status": "pending",
-              "agent": "Code Architect"
-            },
-            {
-              "name": "Identify Dependencies",
-              "status": "pending",
-              "agent": "Code Architect"
-            },
-            {
-              "name": "Create Migration Plan",
-              "status": "pending",
-              "agent": "Code Architect"
-            },
-            {
-              "name": "Document Architecture",
-              "status": "pending",
-              "agent": "Code Architect"
-            },
-            {
-              "name": "Update Jira with Findings",
-              "status": "pending",
-              "agent": "Code Architect"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "id": "sprint_planning",
-          "name": "Sprint Planning",
-          "description": "Plan migration work across sprints",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "Scrum Master",
-            "Project Manager"
-          ],
-          "capabilities": [
-            "sprint_planning",
-            "backlog_grooming",
-            "jira_update"
-          ],
-          "tasks": [
-            {
-              "name": "Create Sprint Backlog",
-              "status": "pending",
-              "agent": "Scrum Master"
-            },
-            {
-              "name": "Estimate Story Points",
-              "status": "pending",
-              "agent": "Scrum Master"
-            },
-            {
-              "name": "Assign Sprint Goals",
-              "status": "pending",
-              "agent": "Scrum Master"
-            },
-            {
-              "name": "Update Jira Board",
-              "status": "pending",
-              "agent": "Project Manager"
-            },
-            {
-              "name": "Schedule Sprint Ceremonies",
-              "status": "pending",
-              "agent": "Scrum Master"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "id": "code_migration",
-          "name": "Code Migration",
-          "description": "Migrate code from source to target framework",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "Code Engineer"
-          ],
-          "capabilities": [
-            "migrate",
-            "generate",
-            "refactor",
-            "file_create"
-          ],
-          "tasks": [
-            {
-              "name": "Setup Target Environment",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Migrate Core Components",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Transform Business Logic",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Update Dependencies",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Daily Standup Updates",
-              "status": "pending",
-              "agent": "Scrum Master"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "id": "validation_fix",
-          "name": "Validation & Fix",
-          "description": "Validate migrated code and fix issues",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "Code Engineer",
-            "Technical Writer"
-          ],
-          "capabilities": [
-            "validate",
-            "debug_fix",
-            "document_code"
-          ],
-          "tasks": [
-            {
-              "name": "Run Validation Tests",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Debug & Fix Issues",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Code Quality Review",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Update Documentation",
-              "status": "pending",
-              "agent": "Technical Writer"
-            },
-            {
-              "name": "Update Jira Tickets",
-              "status": "pending",
-              "agent": "Code Engineer"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "id": "deployment_prep",
-          "name": "Deployment Preparation",
-          "description": "Prepare for deployment with CI/CD setup",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "DevOps Engineer"
-          ],
-          "capabilities": [
-            "ci_pipeline",
-            "cd_pipeline",
-            "infrastructure",
-            "security_scan"
-          ],
-          "tasks": [
-            {
-              "name": "Setup CI/CD Pipeline",
-              "status": "pending",
-              "agent": "DevOps Engineer"
-            },
-            {
-              "name": "Configure Infrastructure",
-              "status": "pending",
-              "agent": "DevOps Engineer"
-            },
-            {
-              "name": "Run Security Scans",
-              "status": "pending",
-              "agent": "DevOps Engineer"
-            },
-            {
-              "name": "Setup Monitoring",
-              "status": "pending",
-              "agent": "DevOps Engineer"
-            },
-            {
-              "name": "Create Deployment Guide",
-              "status": "pending",
-              "agent": "Technical Writer"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "id": "sprint_review",
-          "name": "Sprint Review & Retrospective",
-          "description": "Review progress and conduct retrospective",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "Scrum Master",
-            "Project Manager"
-          ],
-          "capabilities": [
-            "sprint_review",
-            "retrospective",
-            "velocity_tracking"
-          ],
-          "tasks": [
-            {
-              "name": "Conduct Sprint Review",
-              "status": "pending",
-              "agent": "Scrum Master"
-            },
-            {
-              "name": "Demo Migrated Features",
-              "status": "pending",
-              "agent": "Code Engineer"
-            },
-            {
-              "name": "Gather Feedback",
-              "status": "pending",
-              "agent": "Scrum Master"
-            },
-            {
-              "name": "Run Retrospective",
-              "status": "pending",
-              "agent": "Scrum Master"
-            },
-            {
-              "name": "Update Velocity Metrics",
-              "status": "pending",
-              "agent": "Scrum Master"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "id": "project_closure",
-          "name": "Project Closure",
-          "description": "Generate final reports and close project",
-          "status": "pending",
-          "progress": 0,
-          "agents": [
-            "Scrum Master",
-            "Project Manager",
-            "Technical Writer"
-          ],
-          "capabilities": [
-            "create_guides",
-            "project_tracking",
-            "send_email"
-          ],
-          "tasks": [
-            {
-              "name": "Generate Status Report",
-              "status": "pending",
-              "agent": "Scrum Master"
-            },
-            {
-              "name": "Create Migration Guide",
-              "status": "pending",
-              "agent": "Technical Writer"
-            },
-            {
-              "name": "Close Jira Epic",
-              "status": "pending",
-              "agent": "Project Manager"
-            },
-            {
-              "name": "Send Completion Email",
-              "status": "pending",
-              "agent": "Project Manager"
-            },
-            {
-              "name": "Archive Project Artifacts",
-              "status": "pending",
-              "agent": "Project Manager"
-            }
-          ],
-          "artifacts": [],
-          "started_at": null,
-          "completed_at": null
-        }
-      ],
-      "current_stage": 0,
-      "total_stages": 8,
-      "config": {
-        "priority": "medium"
-      },
-      "metadata": {
-        "jira_epic": null,
-        "jira_tickets": [],
-        "slack_channel": null,
-        "email_recipients": [],
-        "sprint_info": {
-          "current_sprint": null,
-          "sprint_goal": null,
-          "velocity": 0
-        }
-      },
-      "artifacts": [],
-      "logs": [],
-      "created_at": "2025-06-27T17:27:24.059995",
-      "updated_at": "2025-06-27T17:27:24.059995",
-      "created_by": "system",
-      "estimated_completion": null,
-      "actual_completion": null
-    },
-    "8d88afce-cb95-42cd-b916-a9cc2b62f038": {
-      "id": "8d88afce-cb95-42cd-b916-a9cc2b62f038",
-      "name": "java2py",
-      "description": "java2py",
+    "e6a6d8c0-87b8-4377-9ef3-81a794667c44": {
+      "id": "e6a6d8c0-87b8-4377-9ef3-81a794667c44",
+      "name": "Java to Python",
+      "description": "spring-boot-examples to Rust migration",
       "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
       "source_name": "spring-boot-examples",
       "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
@@ -1610,16 +1207,16 @@
       },
       "artifacts": [],
       "logs": [],
-      "created_at": "2025-06-27T17:36:56.591311",
-      "updated_at": "2025-06-27T17:36:56.591311",
+      "created_at": "2025-06-29T05:58:46.082741",
+      "updated_at": "2025-06-29T05:58:46.082741",
       "created_by": "system",
       "estimated_completion": null,
       "actual_completion": null
     },
-    "a664f3a1-9c8e-4377-b310-205df4fcda46": {
-      "id": "a664f3a1-9c8e-4377-b310-205df4fcda46",
-      "name": "pyt2java",
-      "description": "pyt2java",
+    "a988bc74-9673-49ad-8a3d-333b75aa00af": {
+      "id": "a988bc74-9673-49ad-8a3d-333b75aa00af",
+      "name": "java 2 py",
+      "description": "spring-boot-examples to Rust migration",
       "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
       "source_name": "spring-boot-examples",
       "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
@@ -2014,8 +1611,1220 @@
       },
       "artifacts": [],
       "logs": [],
-      "created_at": "2025-06-27T19:18:57.326035",
-      "updated_at": "2025-06-27T19:18:57.326035",
+      "created_at": "2025-06-29T06:03:15.883372",
+      "updated_at": "2025-06-29T06:03:15.883372",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "7dafd95e-9286-4bee-9327-c22bf74aa10a": {
+      "id": "7dafd95e-9286-4bee-9327-c22bf74aa10a",
+      "name": "java to rust",
+      "description": "spring-boot-examples to Rust migration",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
+      "target_name": "Rust",
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "project_setup",
+          "name": "Project Setup",
+          "description": "Initialize project with Jira epic, tickets, and team notifications",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Project Manager",
+            "Scrum Master"
+          ],
+          "capabilities": [
+            "jira_create",
+            "send_email",
+            "send_notification"
+          ],
+          "tasks": [
+            {
+              "name": "Create Jira Epic",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Create Initial Tickets",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Kickoff Email",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Slack Notification",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Setup Sprint Structure",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Planning",
+          "description": "Analyze source code and create migration plan",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Source Structure",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Dependencies",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Migration Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Update Jira with Findings",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "sprint_planning",
+          "name": "Sprint Planning",
+          "description": "Plan migration work across sprints",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager"
+          ],
+          "capabilities": [
+            "sprint_planning",
+            "backlog_grooming",
+            "jira_update"
+          ],
+          "tasks": [
+            {
+              "name": "Create Sprint Backlog",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Estimate Story Points",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Assign Sprint Goals",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Update Jira Board",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Schedule Sprint Ceremonies",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_migration",
+          "name": "Code Migration",
+          "description": "Migrate code from source to target framework",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "migrate",
+            "generate",
+            "refactor",
+            "file_create"
+          ],
+          "tasks": [
+            {
+              "name": "Setup Target Environment",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Migrate Core Components",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Transform Business Logic",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Dependencies",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Daily Standup Updates",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "validation_fix",
+          "name": "Validation & Fix",
+          "description": "Validate migrated code and fix issues",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix",
+            "document_code"
+          ],
+          "tasks": [
+            {
+              "name": "Run Validation Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Debug & Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Code Quality Review",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Update Jira Tickets",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "deployment_prep",
+          "name": "Deployment Preparation",
+          "description": "Prepare for deployment with CI/CD setup",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "DevOps Engineer"
+          ],
+          "capabilities": [
+            "ci_pipeline",
+            "cd_pipeline",
+            "infrastructure",
+            "security_scan"
+          ],
+          "tasks": [
+            {
+              "name": "Setup CI/CD Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Infrastructure",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Run Security Scans",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Setup Monitoring",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Create Deployment Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "sprint_review",
+          "name": "Sprint Review & Retrospective",
+          "description": "Review progress and conduct retrospective",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager"
+          ],
+          "capabilities": [
+            "sprint_review",
+            "retrospective",
+            "velocity_tracking"
+          ],
+          "tasks": [
+            {
+              "name": "Conduct Sprint Review",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Demo Migrated Features",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Gather Feedback",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Run Retrospective",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Update Velocity Metrics",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "project_closure",
+          "name": "Project Closure",
+          "description": "Generate final reports and close project",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "create_guides",
+            "project_tracking",
+            "send_email"
+          ],
+          "tasks": [
+            {
+              "name": "Generate Status Report",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Create Migration Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Close Jira Epic",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Completion Email",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Archive Project Artifacts",
+              "status": "pending",
+              "agent": "Project Manager"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 8,
+      "config": {
+        "priority": "medium"
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-06-29T06:15:22.447313",
+      "updated_at": "2025-06-29T06:15:22.447313",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "dcfdef83-2456-4476-82aa-395ecd2c6c16": {
+      "id": "dcfdef83-2456-4476-82aa-395ecd2c6c16",
+      "name": "java 2 python",
+      "description": "spring-boot-examples to Rust migration",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
+      "target_name": "Rust",
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "project_setup",
+          "name": "Project Setup",
+          "description": "Initialize project with Jira epic, tickets, and team notifications",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Project Manager",
+            "Scrum Master"
+          ],
+          "capabilities": [
+            "jira_create",
+            "send_email",
+            "send_notification"
+          ],
+          "tasks": [
+            {
+              "name": "Create Jira Epic",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Create Initial Tickets",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Kickoff Email",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Slack Notification",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Setup Sprint Structure",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Planning",
+          "description": "Analyze source code and create migration plan",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Source Structure",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Dependencies",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Migration Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Update Jira with Findings",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "sprint_planning",
+          "name": "Sprint Planning",
+          "description": "Plan migration work across sprints",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager"
+          ],
+          "capabilities": [
+            "sprint_planning",
+            "backlog_grooming",
+            "jira_update"
+          ],
+          "tasks": [
+            {
+              "name": "Create Sprint Backlog",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Estimate Story Points",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Assign Sprint Goals",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Update Jira Board",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Schedule Sprint Ceremonies",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_migration",
+          "name": "Code Migration",
+          "description": "Migrate code from source to target framework",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "migrate",
+            "generate",
+            "refactor",
+            "file_create"
+          ],
+          "tasks": [
+            {
+              "name": "Setup Target Environment",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Migrate Core Components",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Transform Business Logic",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Dependencies",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Daily Standup Updates",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "validation_fix",
+          "name": "Validation & Fix",
+          "description": "Validate migrated code and fix issues",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix",
+            "document_code"
+          ],
+          "tasks": [
+            {
+              "name": "Run Validation Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Debug & Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Code Quality Review",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Update Jira Tickets",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "deployment_prep",
+          "name": "Deployment Preparation",
+          "description": "Prepare for deployment with CI/CD setup",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "DevOps Engineer"
+          ],
+          "capabilities": [
+            "ci_pipeline",
+            "cd_pipeline",
+            "infrastructure",
+            "security_scan"
+          ],
+          "tasks": [
+            {
+              "name": "Setup CI/CD Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Infrastructure",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Run Security Scans",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Setup Monitoring",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Create Deployment Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "sprint_review",
+          "name": "Sprint Review & Retrospective",
+          "description": "Review progress and conduct retrospective",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager"
+          ],
+          "capabilities": [
+            "sprint_review",
+            "retrospective",
+            "velocity_tracking"
+          ],
+          "tasks": [
+            {
+              "name": "Conduct Sprint Review",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Demo Migrated Features",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Gather Feedback",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Run Retrospective",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Update Velocity Metrics",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "project_closure",
+          "name": "Project Closure",
+          "description": "Generate final reports and close project",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "create_guides",
+            "project_tracking",
+            "send_email"
+          ],
+          "tasks": [
+            {
+              "name": "Generate Status Report",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Create Migration Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Close Jira Epic",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Completion Email",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Archive Project Artifacts",
+              "status": "pending",
+              "agent": "Project Manager"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 8,
+      "config": {
+        "priority": "medium"
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-06-29T06:22:07.550872",
+      "updated_at": "2025-06-29T06:22:07.550872",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "767235ac-1e2a-4e51-b226-151dbb73482d": {
+      "id": "767235ac-1e2a-4e51-b226-151dbb73482d",
+      "name": "java 2 rust",
+      "description": "spring-boot-examples to Rust migration",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
+      "target_name": "Rust",
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "project_setup",
+          "name": "Project Setup",
+          "description": "Initialize project with Jira epic, tickets, and team notifications",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Project Manager",
+            "Scrum Master"
+          ],
+          "capabilities": [
+            "jira_create",
+            "send_email",
+            "send_notification"
+          ],
+          "tasks": [
+            {
+              "name": "Create Jira Epic",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Create Initial Tickets",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Kickoff Email",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Slack Notification",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Setup Sprint Structure",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Planning",
+          "description": "Analyze source code and create migration plan",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Source Structure",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Dependencies",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Migration Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Update Jira with Findings",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "sprint_planning",
+          "name": "Sprint Planning",
+          "description": "Plan migration work across sprints",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager"
+          ],
+          "capabilities": [
+            "sprint_planning",
+            "backlog_grooming",
+            "jira_update"
+          ],
+          "tasks": [
+            {
+              "name": "Create Sprint Backlog",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Estimate Story Points",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Assign Sprint Goals",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Update Jira Board",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Schedule Sprint Ceremonies",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_migration",
+          "name": "Code Migration",
+          "description": "Migrate code from source to target framework",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "migrate",
+            "generate",
+            "refactor",
+            "file_create"
+          ],
+          "tasks": [
+            {
+              "name": "Setup Target Environment",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Migrate Core Components",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Transform Business Logic",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Dependencies",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Daily Standup Updates",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "validation_fix",
+          "name": "Validation & Fix",
+          "description": "Validate migrated code and fix issues",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix",
+            "document_code"
+          ],
+          "tasks": [
+            {
+              "name": "Run Validation Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Debug & Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Code Quality Review",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Update Jira Tickets",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "deployment_prep",
+          "name": "Deployment Preparation",
+          "description": "Prepare for deployment with CI/CD setup",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "DevOps Engineer"
+          ],
+          "capabilities": [
+            "ci_pipeline",
+            "cd_pipeline",
+            "infrastructure",
+            "security_scan"
+          ],
+          "tasks": [
+            {
+              "name": "Setup CI/CD Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Infrastructure",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Run Security Scans",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Setup Monitoring",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Create Deployment Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "sprint_review",
+          "name": "Sprint Review & Retrospective",
+          "description": "Review progress and conduct retrospective",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager"
+          ],
+          "capabilities": [
+            "sprint_review",
+            "retrospective",
+            "velocity_tracking"
+          ],
+          "tasks": [
+            {
+              "name": "Conduct Sprint Review",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Demo Migrated Features",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Gather Feedback",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Run Retrospective",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Update Velocity Metrics",
+              "status": "pending",
+              "agent": "Scrum Master"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "project_closure",
+          "name": "Project Closure",
+          "description": "Generate final reports and close project",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Scrum Master",
+            "Project Manager",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "create_guides",
+            "project_tracking",
+            "send_email"
+          ],
+          "tasks": [
+            {
+              "name": "Generate Status Report",
+              "status": "pending",
+              "agent": "Scrum Master"
+            },
+            {
+              "name": "Create Migration Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Close Jira Epic",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Completion Email",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Archive Project Artifacts",
+              "status": "pending",
+              "agent": "Project Manager"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 8,
+      "config": {
+        "priority": "medium"
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-06-29T06:29:04.306645",
+      "updated_at": "2025-06-29T06:29:18.235378",
       "created_by": "system",
       "estimated_completion": null,
       "actual_completion": null

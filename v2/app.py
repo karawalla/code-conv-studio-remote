@@ -649,6 +649,9 @@ def get_stage_config(job_id, stage_id):
 def update_stage_config(job_id, stage_id):
     """Update configuration for a specific stage"""
     try:
+        from services.jobs_service import JobsService
+        jobs_service = JobsService(Config.DATA_FOLDER)
+        
         data = request.get_json()
         
         # Update stage with credentials and other config
@@ -670,6 +673,51 @@ def update_stage_config(job_id, stage_id):
             return jsonify({'error': 'Failed to save stage configuration'}), 500
     except Exception as e:
         logger.error(f"Error updating stage config: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/jobs/<job_id>/stages/<stage_id>/tasks/<int:task_index>/config', methods=['PUT'])
+def update_task_config(job_id, stage_id, task_index):
+    """Update configuration for a specific task within a stage"""
+    try:
+        from services.jobs_service import JobsService
+        jobs_service = JobsService(Config.DATA_FOLDER)
+        
+        data = request.get_json()
+        
+        # Get the job to update the task
+        job = jobs_service.get_job(job_id)
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+        
+        # Find the stage
+        stage = None
+        for s in job['stages']:
+            if s['id'] == stage_id:
+                stage = s
+                break
+        
+        if not stage:
+            return jsonify({'error': 'Stage not found'}), 404
+        
+        # Check if task exists
+        if task_index >= len(stage.get('tasks', [])):
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # Update task configuration
+        if 'tasks' not in stage:
+            stage['tasks'] = []
+        
+        task = stage['tasks'][task_index]
+        task['config'] = data
+        
+        # Save the updated job
+        if jobs_service.update_job(job_id, {'stages': job['stages']}):
+            return jsonify({'message': 'Task configuration updated successfully'})
+        else:
+            return jsonify({'error': 'Failed to save task configuration'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error updating task config: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/config/templates')
