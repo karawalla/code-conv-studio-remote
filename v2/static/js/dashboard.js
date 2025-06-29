@@ -2572,14 +2572,43 @@ function renderInlineJobStages(stages, currentStage) {
         const timelineItem = document.createElement('div');
         timelineItem.className = `timeline-item ${stage.status.replace('_', '-')}`;
         
+        // Determine which credential type this stage might need
+        const stageCredentialTypes = getStageCredentialTypes(stage.id);
+        
         timelineItem.innerHTML = `
             <div class="timeline-card">
                 <div class="timeline-card-header">
-                    <h3 class="timeline-stage-title">${stage.name}</h3>
+                    <div class="stage-header-content">
+                        <h3 class="timeline-stage-title">${stage.name}</h3>
+                        <button class="stage-configure-btn" onclick="configureStage('${stage.id}', '${stage.name}')" title="Configure this stage">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <span class="timeline-status ${stage.status.replace('_', '-')}">${stage.status.replace('_', ' ')}</span>
                 </div>
                 
                 <p class="timeline-description">${stage.description}</p>
+                
+                ${stage.credentials && stage.credentials.length > 0 ? `
+                    <div class="stage-credentials">
+                        <div class="stage-credential-label">Connected Credentials:</div>
+                        <div class="stage-credential-list">
+                            ${stage.credentials.map(cred => `
+                                <div class="stage-credential-chip">
+                                    <span class="credential-icon">${getCredentialIcon(cred.type)}</span>
+                                    <span>${cred.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : stageCredentialTypes.length > 0 ? `
+                    <div class="stage-credentials-needed">
+                        <span class="warning-icon">⚠️</span>
+                        <span>Credentials needed: ${stageCredentialTypes.join(', ')}</span>
+                    </div>
+                ` : ''}
                 
                 <div class="timeline-agents">
                     ${stage.agents.map(agent => `
@@ -2650,6 +2679,35 @@ async function refreshJobDetail() {
     if (jobId) {
         await showJobDetail(jobId);
     }
+}
+
+// Helper function to determine credential types needed for a stage
+function getStageCredentialTypes(stageId) {
+    const credentialMapping = {
+        'project_setup': ['jira', 'slack', 'email'],
+        'code_analysis': ['github'],
+        'sprint_planning': ['jira'],
+        'code_migration': ['github'],
+        'validation_fix': ['github'],
+        'post_processing': ['jira', 'slack'],
+        'deployment': ['github', 'slack'],
+        'knowledge_transfer': ['slack', 'email']
+    };
+    
+    return credentialMapping[stageId] || [];
+}
+
+// Configure stage credentials
+async function configureStage(stageId, stageName) {
+    // Get current job ID
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    if (!jobId) return;
+    
+    // Get stage credential types
+    const credentialTypes = getStageCredentialTypes(stageId);
+    
+    // Show stage configuration modal
+    showStageConfigModal(jobId, stageId, stageName, credentialTypes);
 }
 
 // ===== CONFIGURATION FUNCTIONS =====
@@ -3434,5 +3492,179 @@ function deleteJob(jobId, jobName) {
             showNotification('Failed to delete job', 'error');
         });
     }
+}
+
+// Show stage configuration modal
+async function showStageConfigModal(jobId, stageId, stageName, requiredTypes) {
+    // Create modal dynamically
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'stageConfigModal';
+    
+    // Load available credentials
+    const response = await fetch('/api/credentials');
+    const allCredentials = await response.json();
+    
+    // Load current job configuration
+    const jobResponse = await fetch(`/api/jobs/${jobId}`);
+    const job = await jobResponse.json();
+    const stageConfig = job.stages?.find(s => s.id === stageId);
+    const currentCredentials = stageConfig?.credentials || [];
+    
+    modal.innerHTML = `
+        <div class="modal-content credential-modal" style="max-width: 700px;">
+            <div class="credential-modal-header">
+                <h3>Configure ${stageName}</h3>
+                <button class="close-btn" onclick="closeModal('stageConfigModal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="credential-modal-body">
+                <div class="stage-config-info">
+                    <p>This stage requires the following credential types:</p>
+                    <div class="required-types">
+                        ${requiredTypes.map(type => `
+                            <span class="required-type-badge">
+                                ${getCredentialIcon(type)}
+                                ${type.charAt(0).toUpperCase() + type.slice(1)}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="credential-selection">
+                    <h4>Select Credentials</h4>
+                    <div class="credential-selection-grid">
+                        ${requiredTypes.map(type => {
+                            const typeCredentials = allCredentials.filter(cred => cred.type === type);
+                            const selectedCred = currentCredentials.find(c => c.type === type);
+                            
+                            return `
+                                <div class="credential-type-section">
+                                    <label class="credential-type-label">
+                                        ${getCredentialIcon(type)}
+                                        ${type.charAt(0).toUpperCase() + type.slice(1)}
+                                    </label>
+                                    <select class="form-input" id="stage_cred_${type}" data-type="${type}">
+                                        <option value="">Select ${type} credential...</option>
+                                        ${typeCredentials.map(cred => `
+                                            <option value="${cred.id}" ${selectedCred?.id === cred.id ? 'selected' : ''}>
+                                                ${cred.name} ${cred.status === 'active' ? '✓' : '⚠️'}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                    ${typeCredentials.length === 0 ? `
+                                        <div class="no-credentials-msg">
+                                            <span>No ${type} credentials available</span>
+                                            <button class="btn btn-sm btn-primary" onclick="showAddCredentialModal(); selectCredentialType('${type}');">
+                                                Add ${type} credential
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+                
+                <div class="stage-additional-config">
+                    <h4>Additional Configuration</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stage_notify_on_start" ${stageConfig?.notify_on_start ? 'checked' : ''}>
+                            Send notification when stage starts
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stage_notify_on_complete" ${stageConfig?.notify_on_complete ? 'checked' : ''}>
+                            Send notification when stage completes
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stage_create_jira_ticket" ${stageConfig?.create_jira_ticket ? 'checked' : ''}>
+                            Create Jira ticket for this stage
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="credential-modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('stageConfigModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveStageConfig('${jobId}', '${stageId}')">
+                    Save Configuration
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.classList.add('show');
+}
+
+// Save stage configuration
+async function saveStageConfig(jobId, stageId) {
+    const requiredTypes = getStageCredentialTypes(stageId);
+    const credentials = [];
+    
+    // Collect selected credentials
+    for (const type of requiredTypes) {
+        const select = document.getElementById(`stage_cred_${type}`);
+        if (select && select.value) {
+            credentials.push({
+                id: select.value,
+                type: type,
+                name: select.options[select.selectedIndex].text.split(' ')[0] // Get credential name
+            });
+        }
+    }
+    
+    // Collect additional config
+    const config = {
+        credentials: credentials,
+        notify_on_start: document.getElementById('stage_notify_on_start')?.checked || false,
+        notify_on_complete: document.getElementById('stage_notify_on_complete')?.checked || false,
+        create_jira_ticket: document.getElementById('stage_create_jira_ticket')?.checked || false
+    };
+    
+    try {
+        const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/config`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+        
+        if (response.ok) {
+            showNotification('Stage configuration saved successfully', 'success');
+            closeModal('stageConfigModal');
+            // Refresh job detail
+            await showInlineJobDetail(jobId);
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to save configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving stage config:', error);
+        showNotification('Failed to save configuration', 'error');
+    }
+}
+
+// Helper to pre-select credential type when adding from stage config
+function selectCredentialType(type) {
+    // Wait for modal to be shown
+    setTimeout(() => {
+        const typeCards = document.querySelectorAll('.credential-type-card');
+        typeCards.forEach(card => {
+            if (card.getAttribute('data-type') === type) {
+                card.click();
+            }
+        });
+    }, 100);
 }
 

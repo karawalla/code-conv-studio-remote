@@ -649,18 +649,22 @@ def get_stage_config(job_id, stage_id):
 def update_stage_config(job_id, stage_id):
     """Update configuration for a specific stage"""
     try:
-        from services.config_service import ConfigurationService
-        from services.integration_plugins import create_default_plugins
-        
-        config_service = ConfigurationService(Config.DATA_FOLDER)
-        
-        # Register default plugins
-        for name, plugin in create_default_plugins().items():
-            config_service.register_plugin(name, plugin)
-        
         data = request.get_json()
         
-        if config_service.update_stage_config(job_id, stage_id, data):
+        # Update stage with credentials and other config
+        if jobs_service.update_stage_credentials(job_id, stage_id, data.get('credentials', [])):
+            # Also update additional config if needed
+            updates = {}
+            if 'notify_on_start' in data:
+                updates['notify_on_start'] = data['notify_on_start']
+            if 'notify_on_complete' in data:
+                updates['notify_on_complete'] = data['notify_on_complete']
+            if 'create_jira_ticket' in data:
+                updates['create_jira_ticket'] = data['create_jira_ticket']
+            
+            if updates:
+                jobs_service.update_stage(job_id, stage_id, updates)
+            
             return jsonify({'message': 'Stage configuration updated successfully'})
         else:
             return jsonify({'error': 'Failed to save stage configuration'}), 500

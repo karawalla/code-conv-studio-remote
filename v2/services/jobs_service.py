@@ -385,3 +385,29 @@ class JobsService:
             self._save_jobs(data)
             return True
         return False
+        
+    def update_stage_credentials(self, job_id: str, stage_id: str, credentials: List[Dict]) -> bool:
+        """Update credentials for a specific stage"""
+        data = self._load_jobs()
+        if job_id not in data.get('jobs', {}):
+            return False
+            
+        job = data['jobs'][job_id]
+        
+        # Find stage
+        stage = None
+        for s in job['stages']:
+            if s['id'] == stage_id:
+                stage = s
+                break
+                
+        if stage is None:
+            return False
+            
+        # Update stage credentials
+        stage['credentials'] = credentials
+        job['updated_at'] = datetime.now().isoformat()
+        
+        # Save
+        self._save_jobs(data)
+        return True
