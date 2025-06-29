@@ -2552,6 +2552,13 @@ function renderInlineJobStages(stages, currentStage) {
                                         </svg>
                                     </button>
                                 ` : ''}
+                                ${task.status === 'completed' || task.status === 'failed' ? `
+                                    <button class="task-output-btn" onclick="event.stopPropagation(); viewTaskOutput('${stage.id}', ${taskIndex})" title="View Output">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </button>
+                                ` : ''}
                             </div>
                             
                             <div class="task-config-section" id="taskConfig_${stage.id}_${taskIndex}" style="display: none;">
@@ -3752,6 +3759,138 @@ function closeTaskConnectionModal() {
 }
 
 // Execute a task
+// View task output
+async function viewTaskOutput(stageId, taskIndex) {
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    if (!jobId) {
+        showNotification('No job selected', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/output`);
+        
+        if (response.ok) {
+            const output = await response.json();
+            showTaskOutputModal(output, stageId, taskIndex);
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to load output', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading task output:', error);
+        showNotification('Failed to load task output', 'error');
+    }
+}
+
+// Show task output modal
+function showTaskOutputModal(output, stageId, taskIndex) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('taskOutputModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'taskOutputModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+                <div class="modal-header">
+                    <h3 id="outputModalTitle">Task Output</h3>
+                    <button class="modal-close" onclick="closeTaskOutputModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 120px);">
+                    <div id="taskOutputContent" style="white-space: pre-wrap; font-family: monospace; font-size: 14px; line-height: 1.6; background: #f5f5f5; padding: 20px; border-radius: 8px;">
+                        Loading output...
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="copyTaskOutput()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                        </svg>
+                        Copy Output
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadTaskOutput()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Download
+                    </button>
+                    <button class="btn btn-primary" onclick="closeTaskOutputModal()">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Update content
+    const contentDiv = document.getElementById('taskOutputContent');
+    const titleDiv = document.getElementById('outputModalTitle');
+    
+    titleDiv.textContent = `Task Output - Execution ${output.execution_id.split('_').pop()}`;
+    
+    // Store output for copy/download functions
+    modal.dataset.outputContent = output.content;
+    modal.dataset.outputId = output.execution_id;
+    
+    // Format the content with syntax highlighting if possible
+    const formattedContent = output.content
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code style="background: #e8e8e8; padding: 2px 4px; border-radius: 3px;">$1</code>')
+        .replace(/##\s+(.+)/g, '<h3 style="color: #3b82f6; margin: 20px 0 10px;">$1</h3>')
+        .replace(/###\s+(.+)/g, '<h4 style="color: #666; margin: 15px 0 8px;">$1</h4>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    
+    contentDiv.innerHTML = formattedContent;
+    
+    // Show modal
+    modal.classList.add('show');
+}
+
+// Close task output modal
+function closeTaskOutputModal() {
+    const modal = document.getElementById('taskOutputModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+// Copy task output to clipboard
+function copyTaskOutput() {
+    const modal = document.getElementById('taskOutputModal');
+    const content = modal.dataset.outputContent;
+    
+    navigator.clipboard.writeText(content).then(() => {
+        showNotification('Output copied to clipboard', 'success');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showNotification('Failed to copy output', 'error');
+    });
+}
+
+// Download task output
+function downloadTaskOutput() {
+    const modal = document.getElementById('taskOutputModal');
+    const content = modal.dataset.outputContent;
+    const outputId = modal.dataset.outputId;
+    
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `task_output_${outputId}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showNotification('Output downloaded', 'success');
+}
+
 async function executeTask(stageId, taskIndex) {
     const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
     if (!jobId) {

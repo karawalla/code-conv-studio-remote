@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class ExecutionService:
     def __init__(self):
         self.prompts_dir = Path(__file__).parent.parent / 'prompts'
+        self.data_dir = Path(__file__).parent.parent / 'data'
         self.executions = {}
         self.execution_logs = []
         
@@ -137,6 +138,10 @@ class ExecutionService:
             'prompt_results': results,
             'timestamp': datetime.now().isoformat()
         }
+        
+        # Save outputs to file system
+        output_paths = self._save_execution_outputs(job_id, stage_id, task_index, task, results)
+        execution_result['output_paths'] = output_paths
         
         # Store execution history
         self.executions[execution_id] = execution_result
@@ -379,6 +384,112 @@ Working Directory: {context.get('working_directory', os.getcwd())}
     def get_execution_details(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """Get details of a specific execution"""
         return self.executions.get(execution_id)
+    
+    def _save_execution_outputs(self, job_id: str, stage_id: str, task_index: int, 
+                               task: Dict[str, Any], results: List[Dict[str, Any]]) -> Dict[str, List[str]]:
+        """
+        Save execution outputs to the file system
+        
+        Structure: data/jobs/{job_id}/outputs/{stage_id}/{task_index}_{task_name}/
+        """
+        # Clean task name for folder
+        task_name = task.get('name', 'unknown').lower().replace(' ', '_')
+        output_dir = self.data_dir / 'jobs' / job_id / 'outputs' / stage_id / f"{task_index}_{task_name}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        output_paths = {
+            'directory': str(output_dir),
+            'files': []
+        }
+        
+        # Save execution summary
+        summary_path = output_dir / 'execution_summary.json'
+        summary_data = {
+            'job_id': job_id,
+            'stage_id': stage_id,
+            'task_index': task_index,
+            'task': task,
+            'timestamp': datetime.now().isoformat(),
+            'total_prompts': len(results),
+            'successful_prompts': len([r for r in results if r['status'] == 'success']),
+            'failed_prompts': len([r for r in results if r['status'] == 'error'])
+        }
+        
+        with open(summary_path, 'w') as f:
+            json.dump(summary_data, f, indent=2)
+        output_paths['files'].append(str(summary_path))
+        
+        # Save individual prompt outputs
+        for i, result in enumerate(results):
+            prompt_filename = result.get('prompt_file', f'prompt_{i}.md')
+            base_name = prompt_filename.replace('.md', '')
+            
+            # Save the output
+            if result['status'] == 'success' and result.get('output'):
+                output_file = output_dir / f"{base_name}_output.md"
+                with open(output_file, 'w') as f:
+                    f.write(f"# Output for {prompt_filename}\n\n")
+                    f.write(f"Timestamp: {result.get('timestamp', 'N/A')}\n\n")
+                    f.write("---\n\n")
+                    f.write(result['output'])
+                output_paths['files'].append(str(output_file))
+            
+            # Save any errors
+            if result['status'] == 'error' and result.get('error'):
+                error_file = output_dir / f"{base_name}_error.txt"
+                with open(error_file, 'w') as f:
+                    f.write(f"Error for {prompt_filename}\n")
+                    f.write(f"Timestamp: {result.get('timestamp', 'N/A')}\n\n")
+                    f.write(result['error'])
+                output_paths['files'].append(str(error_file))
+        
+        # Create a combined output file
+        combined_output = output_dir / 'combined_output.md'
+        with open(combined_output, 'w') as f:
+            f.write(f"# Combined Output for {task.get('name', 'Task')}\n\n")
+            f.write(f"Agent: {task.get('agent', 'Unknown')}\n")
+            f.write(f"Timestamp: {datetime.now().isoformat()}\n\n")
+            
+            for i, result in enumerate(results):
+                f.write(f"## Prompt {i+1}: {result.get('prompt_file', 'Unknown')}\n\n")
+                if result['status'] == 'success':
+                    f.write(result.get('output', 'No output'))
+                else:
+                    f.write(f"**Error**: {result.get('error', 'Unknown error')}")
+                f.write("\n\n---\n\n")
+        
+        output_paths['files'].append(str(combined_output))
+        
+        logger.info(f"Saved {len(output_paths['files'])} output files to {output_dir}")
+        return output_paths
+    
+    def get_task_output(self, job_id: str, stage_id: str, task_index: int) -> Optional[Dict[str, Any]]:
+        """
+        Get the output for a specific task
+        """
+        # Find the most recent execution for this task
+        for execution in reversed(self.execution_logs):
+            if (execution['job_id'] == job_id and 
+                execution['stage_id'] == stage_id and 
+                execution['task_index'] == task_index):
+                
+                output_paths = execution.get('output_paths', {})
+                if output_paths and 'directory' in output_paths:
+                    # Read the combined output
+                    combined_path = Path(output_paths['directory']) / 'combined_output.md'
+                    if combined_path.exists():
+                        with open(combined_path, 'r') as f:
+                            content = f.read()
+                        
+                        return {
+                            'execution_id': execution['execution_id'],
+                            'timestamp': execution['timestamp'],
+                            'status': execution['status'],
+                            'content': content,
+                            'output_paths': output_paths
+                        }
+        
+        return None
 
 # Global instance
 execution_service = ExecutionService()

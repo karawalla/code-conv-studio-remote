@@ -1046,6 +1046,20 @@ def execute_task(job_id, stage_id, task_index):
             
         task = stage['tasks'][task_index]
         
+        # Get source information for working directory
+        source = sources_service.get_source(job.get('source_id'))
+        working_directory = None
+        if source:
+            if source['type'] == 'local':
+                working_directory = source.get('info', {}).get('path')
+            elif source['type'] == 'github':
+                # For GitHub sources, use the cloned repository path
+                repo_name = source.get('url', '').split('/')[-1].replace('.git', '')
+                working_directory = os.path.join(Config.DATA_FOLDER, 'sources', source['id'], repo_name)
+        
+        if not working_directory:
+            working_directory = os.getcwd()
+        
         # Prepare execution context
         context = {
             'job_id': job_id,
@@ -1055,12 +1069,14 @@ def execute_task(job_id, stage_id, task_index):
             'source_type': job.get('source_type', ''),
             'target_id': job.get('target_id', ''),
             'target_name': job.get('target_name', ''),
+            'target_type': job.get('target_type', ''),
             'stage_id': stage_id,
             'stage_name': stage.get('name', ''),
             'task_name': task.get('name', ''),
             'agent': task.get('agent', ''),
             'capability': task.get('name', '').lower().replace(' ', '_'),
-            'task_config': task.get('config', {})
+            'task_config': task.get('config', {}),
+            'working_directory': working_directory
         }
         
         # Execute the task
@@ -1108,6 +1124,22 @@ def get_job_executions(job_id):
         
     except Exception as e:
         logger.error(f"Error getting job executions: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/jobs/<job_id>/stages/<stage_id>/tasks/<int:task_index>/output')
+def get_task_output(job_id, stage_id, task_index):
+    """Get the output for a specific task"""
+    try:
+        from services.execution_service import execution_service
+        
+        output = execution_service.get_task_output(job_id, stage_id, task_index)
+        if output:
+            return jsonify(output)
+        else:
+            return jsonify({'error': 'No output found for this task'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error getting task output: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Error handlers
