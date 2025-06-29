@@ -68,7 +68,8 @@
       "Bash(docker logs:*)",
       "Bash(docker exec:*)",
       "Bash(git rm:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(pip3 install:*)"
     ],
     "deny": []
   }

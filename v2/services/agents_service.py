@@ -85,7 +85,8 @@ class AgentsService:
                         {'id': 'migrate', 'name': 'Migrate Code', 'description': 'Transform code from one framework to another', 'icon': '🔄'},
                         {'id': 'generate', 'name': 'Generate Code', 'description': 'Generate new code based on specifications', 'icon': '⚡'},
                         {'id': 'validate', 'name': 'Validate Code', 'description': 'Validate code quality and correctness', 'icon': '✅'},
-                        {'id': 'refactor', 'name': 'Refactor Code', 'description': 'Improve code structure and quality', 'icon': '🔧'}
+                        {'id': 'refactor', 'name': 'Refactor Code', 'description': 'Improve code structure and quality', 'icon': '🔧'},
+                        {'id': 'debug_fix', 'name': 'Debug & Fix', 'description': 'Debug issues and fix code problems', 'icon': '🐛'}
                     ]
                 },
                 {

@@ -79,6 +79,7 @@ function updatePageHeader(pageName) {
         'sources': 'Sources',
         'targets': 'Targets',
         'jobs': 'Jobs',
+        'createJob': 'Create Job',
         'settings': 'Settings',
         'agents': 'Agents'
     };
@@ -167,6 +168,13 @@ async function loadPageData(pageName) {
             break;
         case 'jobs':
             await loadJobs();
+            break;
+        case 'createJob':
+            await loadCreateJobPage();
+            break;
+        case 'settings':
+            // Load credentials by default when opening settings
+            await loadCredentials();
             break;
     }
 }
@@ -379,12 +387,14 @@ function formatDate(dateString) {
 }
 
 // Modal Functions
-function showNewJobModal() {
-    document.getElementById('newJobModal').classList.add('show');
+function showModal(modalId) {
+    document.getElementById(modalId).classList.add('show');
+    document.body.classList.add('modal-open');
 }
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('show');
+    document.body.classList.remove('modal-open');
 }
 
 // Update Date/Time
@@ -715,7 +725,6 @@ document.head.appendChild(style);
 
 // Export functions for global use
 window.navigateToPage = navigateToPage;
-window.showNewJobModal = showNewJobModal;
 window.closeModal = closeModal;
 window.viewJob = viewJob;
 window.showAddSourceModal = showAddSourceModal;
@@ -1764,6 +1773,1665 @@ function deleteAgent() {
         .catch(error => {
             console.error('Error deleting agent:', error);
             showNotification('Failed to delete agent', 'error');
+        });
+    }
+}
+
+// ===== JOBS FUNCTIONS =====
+
+// Load Jobs
+async function loadJobs() {
+    try {
+        const response = await fetch('/api/jobs');
+        const jobs = await response.json();
+        
+        const tbody = document.getElementById('jobsTableBody');
+        tbody.innerHTML = '';
+        
+        if (jobs.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="jobs-empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <h4>No Migration Jobs Yet</h4>
+                        <p>Start by creating your first migration job</p>
+                        <button class="btn btn-primary" onclick="showNewJobModal()">Create First Job</button>
+                    </td>
+                </tr>
+            `;
+        } else {
+            jobs.forEach(job => {
+                const row = document.createElement('tr');
+                row.onclick = () => showInlineJobDetail(job.id);
+                
+                const createdDate = new Date(job.created_at).toLocaleDateString();
+                const statusClass = job.status.toLowerCase();
+                
+                row.innerHTML = `
+                    <td>
+                        <div class="job-name">
+                            <strong>${job.name}</strong>
+                            ${job.description ? `<br><small>${job.description}</small>` : ''}
+                        </div>
+                    </td>
+                    <td>${job.source_name || 'N/A'}</td>
+                    <td>${job.target_name || 'N/A'}</td>
+                    <td>
+                        <span class="status-badge ${statusClass}">${job.status}</span>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${job.progress}%"></div>
+                            </div>
+                            <span>${job.progress}%</span>
+                        </div>
+                    </td>
+                    <td>${createdDate}</td>
+                    <td>
+                        <div class="job-actions">
+                            <button class="job-action-btn" onclick="event.stopPropagation(); showInlineJobDetail('${job.id}')" title="View Details">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                            <button class="job-action-btn" onclick="event.stopPropagation(); deleteJob('${job.id}', '${job.name}')" title="Delete Job">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading jobs:', error);
+        showNotification('Error loading jobs', 'error');
+    }
+}
+
+// Show Inline Job Form
+async function showNewJobModal() {
+    try {
+        // Hide jobs table and show inline form
+        document.getElementById('jobsTableContainer').style.display = 'none';
+        document.getElementById('inlineCreateJob').style.display = 'block';
+        
+        // Load sources and targets
+        await Promise.all([loadInlineJobSources(), loadInlineJobTargets()]);
+        
+        // Initialize @ mention system
+        initializeMentionSystem();
+    } catch (error) {
+        console.error('Error showing inline job form:', error);
+        showNotification('Failed to load job creation form', 'error');
+    }
+}
+
+// @ Mention System
+let selectedCredentials = [];
+let mentionSuggestions = [];
+let currentMentionIndex = 0;
+
+function initializeMentionSystem() {
+    const input = document.getElementById('credentialMentions');
+    const suggestionsDiv = document.getElementById('mentionSuggestions');
+    selectedCredentials = [];
+    updateSelectedCredentialsDisplay();
+    
+    input.addEventListener('input', handleMentionInput);
+    input.addEventListener('keydown', handleMentionKeydown);
+    
+    // Click outside to close suggestions
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.mention-input-wrapper')) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+}
+
+async function handleMentionInput(e) {
+    const input = e.target;
+    const value = input.value;
+    const cursorPosition = input.selectionStart;
+    
+    // Find @ symbol before cursor
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1 && lastAtIndex === textBeforeCursor.length - 1 || 
+        (lastAtIndex !== -1 && !value.substring(lastAtIndex + 1, cursorPosition).includes(' '))) {
+        // Show suggestions
+        const query = value.substring(lastAtIndex + 1, cursorPosition);
+        await showMentionSuggestions(query);
+    } else {
+        // Hide suggestions
+        document.getElementById('mentionSuggestions').style.display = 'none';
+    }
+}
+
+async function showMentionSuggestions(query) {
+    try {
+        const response = await fetch(`/api/credentials/search?q=${query}`);
+        const credentials = await response.json();
+        
+        // Filter out already selected credentials
+        mentionSuggestions = credentials.filter(cred => 
+            !selectedCredentials.find(selected => selected.id === cred.id)
+        );
+        
+        const suggestionsDiv = document.getElementById('mentionSuggestions');
+        
+        if (mentionSuggestions.length > 0) {
+            currentMentionIndex = 0;
+            suggestionsDiv.innerHTML = mentionSuggestions.map((cred, index) => `
+                <div class="mention-suggestion ${index === 0 ? 'active' : ''}" 
+                     data-index="${index}"
+                     onclick="selectMention(${index})">
+                    <span class="mention-icon">${cred.icon}</span>
+                    <div class="mention-info">
+                        <div class="mention-name">@${cred.name}</div>
+                        <div class="mention-type">${cred.type}</div>
+                    </div>
+                </div>
+            `).join('');
+            suggestionsDiv.style.display = 'block';
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading mention suggestions:', error);
+    }
+}
+
+function handleMentionKeydown(e) {
+    const suggestionsDiv = document.getElementById('mentionSuggestions');
+    if (suggestionsDiv.style.display === 'none') return;
+    
+    switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            currentMentionIndex = Math.min(currentMentionIndex + 1, mentionSuggestions.length - 1);
+            updateMentionHighlight();
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            currentMentionIndex = Math.max(currentMentionIndex - 1, 0);
+            updateMentionHighlight();
+            break;
+        case 'Enter':
+            e.preventDefault();
+            if (mentionSuggestions.length > 0) {
+                selectMention(currentMentionIndex);
+            }
+            break;
+        case 'Escape':
+            suggestionsDiv.style.display = 'none';
+            break;
+    }
+}
+
+function updateMentionHighlight() {
+    document.querySelectorAll('.mention-suggestion').forEach((elem, index) => {
+        elem.classList.toggle('active', index === currentMentionIndex);
+    });
+}
+
+function selectMention(index) {
+    const credential = mentionSuggestions[index];
+    const input = document.getElementById('credentialMentions');
+    const value = input.value;
+    const cursorPosition = input.selectionStart;
+    
+    // Find @ symbol before cursor
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    // Replace the @ mention with empty string
+    input.value = value.substring(0, lastAtIndex) + value.substring(cursorPosition);
+    
+    // Add to selected credentials
+    selectedCredentials.push(credential);
+    updateSelectedCredentialsDisplay();
+    
+    // Hide suggestions
+    document.getElementById('mentionSuggestions').style.display = 'none';
+    
+    // Focus back on input
+    input.focus();
+}
+
+function updateSelectedCredentialsDisplay() {
+    const container = document.getElementById('selectedCredentials');
+    container.innerHTML = selectedCredentials.map(cred => `
+        <div class="credential-chip">
+            <span class="credential-chip-icon">${cred.icon}</span>
+            <span>@${cred.name}</span>
+            <button class="credential-chip-remove" onclick="removeCredential('${cred.id}')">&times;</button>
+        </div>
+    `).join('');
+}
+
+function removeCredential(credentialId) {
+    selectedCredentials = selectedCredentials.filter(cred => cred.id !== credentialId);
+    updateSelectedCredentialsDisplay();
+}
+
+// Load Sources for Inline Job Form
+async function loadInlineJobSources() {
+    try {
+        const response = await fetch('/api/sources');
+        const sources = await response.json();
+        
+        const select = document.getElementById('inlineSourceSelect');
+        select.innerHTML = '<option value="">Choose source...</option>';
+        
+        sources.forEach(source => {
+            const option = document.createElement('option');
+            option.value = source.id;
+            option.textContent = `${source.name} (${source.type})`;
+            option.dataset.name = source.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading sources for inline job form:', error);
+    }
+}
+
+// Load Targets for Inline Job Form
+async function loadInlineJobTargets() {
+    try {
+        const response = await fetch('/api/targets');
+        const targets = await response.json();
+        
+        const select = document.getElementById('inlineTargetSelect');
+        select.innerHTML = '<option value="">Choose target...</option>';
+        
+        targets.forEach(target => {
+            const option = document.createElement('option');
+            option.value = target.id;
+            option.textContent = target.name;
+            option.dataset.name = target.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading targets for inline job form:', error);
+    }
+}
+
+// Cancel Inline Job Form
+function cancelInlineJob() {
+    // Show jobs table and hide inline form
+    document.getElementById('jobsTableContainer').style.display = 'block';
+    document.getElementById('inlineCreateJob').style.display = 'none';
+    
+    // Reset form
+    document.getElementById('inlineJobName').value = '';
+    document.getElementById('inlineSourceSelect').value = '';
+    document.getElementById('inlineTargetSelect').value = '';
+    
+    // Clear selected credentials
+    selectedCredentials = [];
+    document.getElementById('selectedCredentials').innerHTML = '';
+    document.getElementById('credentialMentions').value = '';
+}
+
+// Save Inline Job
+async function saveInlineJob() {
+    const nameInput = document.getElementById('inlineJobName');
+    const sourceSelect = document.getElementById('inlineSourceSelect');
+    const targetSelect = document.getElementById('inlineTargetSelect');
+    
+    // Validate required fields
+    if (!nameInput.value.trim()) {
+        showNotification('Job name is required', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!sourceSelect.value) {
+        showNotification('Please select a source repository', 'error');
+        sourceSelect.focus();
+        return;
+    }
+    
+    if (!targetSelect.value) {
+        showNotification('Please select a target platform', 'error');
+        targetSelect.focus();
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('inlineSaveJobBtnText');
+    const spinner = document.getElementById('inlineSaveJobSpinner');
+    btn.style.display = 'none';
+    spinner.style.display = 'block';
+    
+    try {
+        const jobData = {
+            name: nameInput.value.trim(),
+            description: `${sourceSelect.options[sourceSelect.selectedIndex].dataset.name} to ${targetSelect.options[targetSelect.selectedIndex].dataset.name} migration`,
+            source_id: sourceSelect.value,
+            source_name: sourceSelect.options[sourceSelect.selectedIndex].dataset.name,
+            target_id: targetSelect.value,
+            target_name: targetSelect.options[targetSelect.selectedIndex].dataset.name,
+            config: {
+                priority: 'medium',
+                credentials: selectedCredentials.map(cred => ({
+                    id: cred.id,
+                    name: cred.name,
+                    type: cred.type
+                }))
+            },
+            created_by: 'system'
+        };
+        
+        const response = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jobData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Migration job created successfully!', 'success');
+            
+            // Reset form and show jobs table
+            cancelInlineJob();
+            
+            // Reload jobs
+            await loadJobs();
+            
+            // Show job detail modal after a brief delay
+            setTimeout(() => showJobDetail(result.id), 500);
+        } else {
+            showNotification(result.error || 'Failed to create job', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating job:', error);
+        showNotification('Failed to create job', 'error');
+    } finally {
+        // Reset button state
+        btn.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+// Load Create Job Page
+async function loadCreateJobPage() {
+    try {
+        // Load sources and targets for the create job page
+        await Promise.all([loadCreateJobSources(), loadCreateJobTargets()]);
+    } catch (error) {
+        console.error('Error loading create job page:', error);
+        showNotification('Failed to load job creation page', 'error');
+    }
+}
+
+// Load Sources for Create Job Page
+async function loadCreateJobSources() {
+    try {
+        const response = await fetch('/api/sources');
+        const sources = await response.json();
+        
+        const select = document.getElementById('createSourceSelect');
+        select.innerHTML = '<option value="">Choose source repository...</option>';
+        
+        sources.forEach(source => {
+            const option = document.createElement('option');
+            option.value = source.id;
+            option.textContent = `${source.name} (${source.type})`;
+            option.dataset.name = source.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading sources for create job page:', error);
+    }
+}
+
+// Load Targets for Create Job Page
+async function loadCreateJobTargets() {
+    try {
+        const response = await fetch('/api/targets');
+        const targets = await response.json();
+        
+        const select = document.getElementById('createTargetSelect');
+        select.innerHTML = '<option value="">Choose target platform...</option>';
+        
+        targets.forEach(target => {
+            const option = document.createElement('option');
+            option.value = target.id;
+            option.textContent = target.name;
+            option.dataset.name = target.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading targets for create job page:', error);
+    }
+}
+
+// Save Job from Create Job Page
+async function saveJob() {
+    const nameInput = document.getElementById('createJobName');
+    const descriptionInput = document.getElementById('createJobDescription');
+    const sourceSelect = document.getElementById('createSourceSelect');
+    const targetSelect = document.getElementById('createTargetSelect');
+    
+    // Validate required fields
+    if (!nameInput.value.trim()) {
+        showNotification('Job name is required', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!sourceSelect.value) {
+        showNotification('Please select a source repository', 'error');
+        sourceSelect.focus();
+        return;
+    }
+    
+    if (!targetSelect.value) {
+        showNotification('Please select a target platform', 'error');
+        targetSelect.focus();
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('saveJobBtnText');
+    const spinner = document.getElementById('saveJobSpinner');
+    btn.style.display = 'none';
+    spinner.style.display = 'block';
+    
+    try {
+        const jobData = {
+            name: nameInput.value.trim(),
+            description: descriptionInput.value.trim(),
+            source_id: sourceSelect.value,
+            source_name: sourceSelect.options[sourceSelect.selectedIndex].dataset.name,
+            target_id: targetSelect.value,
+            target_name: targetSelect.options[targetSelect.selectedIndex].dataset.name,
+            config: {
+                priority: 'medium'
+            },
+            created_by: 'system'
+        };
+        
+        const response = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jobData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Migration job created successfully!', 'success');
+            
+            // Reset form
+            nameInput.value = '';
+            descriptionInput.value = '';
+            sourceSelect.value = '';
+            targetSelect.value = '';
+            
+            // Navigate back to jobs page
+            navigateToPage('jobs');
+            
+            // Show job detail modal after a brief delay
+            setTimeout(() => showJobDetail(result.id), 500);
+        } else {
+            showNotification(result.error || 'Failed to create job', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating job:', error);
+        showNotification('Failed to create job', 'error');
+    } finally {
+        // Reset button state
+        btn.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+// Legacy functions for modal (keeping for compatibility)
+// Load Sources for Job Creation
+async function loadJobSources() {
+    try {
+        const response = await fetch('/api/sources');
+        const sources = await response.json();
+        
+        const select = document.getElementById('sourceSelect');
+        if (select) {
+            select.innerHTML = '<option value="">Select source...</option>';
+            
+            sources.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.id;
+                option.textContent = `${source.name} (${source.type})`;
+                option.dataset.name = source.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading sources for job:', error);
+    }
+}
+
+// Load Targets for Job Creation
+async function loadJobTargets() {
+    try {
+        const response = await fetch('/api/targets');
+        const targets = await response.json();
+        
+        const select = document.getElementById('targetSelect');
+        if (select) {
+            select.innerHTML = '<option value="">Select target...</option>';
+            
+            targets.forEach(target => {
+                const option = document.createElement('option');
+                option.value = target.id;
+                option.textContent = target.name;
+                option.dataset.name = target.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading targets for job:', error);
+    }
+}
+
+// Create Job
+async function createJob() {
+    const nameInput = document.getElementById('jobName');
+    const descriptionInput = document.getElementById('jobDescription');
+    const sourceSelect = document.getElementById('sourceSelect');
+    const targetSelect = document.getElementById('targetSelect');
+    
+    // Validate required fields
+    if (!nameInput.value.trim()) {
+        showNotification('Job name is required', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!sourceSelect.value) {
+        showNotification('Please select a source repository', 'error');
+        sourceSelect.focus();
+        return;
+    }
+    
+    if (!targetSelect.value) {
+        showNotification('Please select a target platform', 'error');
+        targetSelect.focus();
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('createJobBtnText');
+    const spinner = document.getElementById('createJobSpinner');
+    btn.style.display = 'none';
+    spinner.style.display = 'block';
+    
+    try {
+        const jobData = {
+            name: nameInput.value.trim(),
+            description: descriptionInput.value.trim(),
+            source_id: sourceSelect.value,
+            source_name: sourceSelect.options[sourceSelect.selectedIndex].dataset.name,
+            target_id: targetSelect.value,
+            target_name: targetSelect.options[targetSelect.selectedIndex].dataset.name,
+            config: {
+                priority: 'medium'
+            },
+            created_by: 'system'
+        };
+        
+        const response = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jobData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Migration job created successfully!', 'success');
+            closeModal('newJobModal');
+            
+            // Reset form
+            nameInput.value = '';
+            descriptionInput.value = '';
+            sourceSelect.value = '';
+            targetSelect.value = '';
+            
+            // Reload jobs
+            await loadJobs();
+        } else {
+            showNotification(result.error || 'Failed to create job', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating job:', error);
+        showNotification('Failed to create job', 'error');
+    } finally {
+        // Reset button state
+        btn.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+// Show Inline Job Detail
+async function showInlineJobDetail(jobId) {
+    try {
+        const response = await fetch(`/api/jobs/${jobId}`);
+        const job = await response.json();
+        
+        if (!response.ok) {
+            showNotification(job.error || 'Job not found', 'error');
+            return;
+        }
+        
+        // Hide tables and forms, show job detail
+        document.getElementById('jobsTableContainer').style.display = 'none';
+        document.getElementById('inlineCreateJob').style.display = 'none';
+        document.getElementById('inlineJobDetail').style.display = 'block';
+        
+        // Populate timeline details
+        document.getElementById('inlineJobDetailName').textContent = job.name;
+        document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your migration progress step by step';
+        document.getElementById('inlineJobDetailSource').textContent = job.source_name || 'N/A';
+        document.getElementById('inlineJobDetailTarget').textContent = job.target_name || 'N/A';
+        document.getElementById('inlineJobDetailCreated').textContent = new Date(job.created_at).toLocaleDateString();
+        
+        // Show linked credentials if any
+        const credentialsContainer = document.getElementById('inlineJobDetailCredentials');
+        if (credentialsContainer && job.config && job.config.credentials && job.config.credentials.length > 0) {
+            credentialsContainer.innerHTML = `
+                <div class="linked-credentials">
+                    <h4>Linked Credentials</h4>
+                    <div class="credential-chips">
+                        ${job.config.credentials.map(cred => `
+                            <div class="credential-chip">
+                                <span>${getCredentialIcon(cred.type)}</span>
+                                <span>${cred.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            credentialsContainer.style.display = 'block';
+        } else if (credentialsContainer) {
+            credentialsContainer.style.display = 'none';
+        }
+        
+        // Render beautiful timeline
+        renderInlineJobStages(job.stages, job.current_stage);
+        
+        // Store job ID for refresh
+        document.getElementById('inlineJobDetail').dataset.jobId = jobId;
+    } catch (error) {
+        console.error('Error loading job details:', error);
+        showNotification('Failed to load job details', 'error');
+    }
+}
+
+// Close Inline Job Detail
+function closeInlineJobDetail() {
+    document.getElementById('inlineJobDetail').style.display = 'none';
+    document.getElementById('jobsTableContainer').style.display = 'block';
+}
+
+// Show Job Detail Modal (keeping for backward compatibility)
+async function showJobDetail(jobId) {
+    // Redirect to inline view
+    await showInlineJobDetail(jobId);
+}
+
+// Render Job Stages (Beautiful Timeline)
+function renderJobStages(stages, currentStage) {
+    const container = document.getElementById('jobStagesContainer');
+    container.innerHTML = '';
+    
+    if (!stages || stages.length === 0) {
+        container.innerHTML = `
+            <div class="timeline-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p>No migration stages yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    stages.forEach((stage, index) => {
+        const timelineItem = document.createElement('div');
+        timelineItem.className = `timeline-item ${stage.status.replace('_', '-')}`;
+        
+        timelineItem.innerHTML = `
+            <div class="timeline-card">
+                <div class="timeline-card-header">
+                    <h3 class="timeline-stage-title">${stage.name}</h3>
+                    <span class="timeline-status ${stage.status.replace('_', '-')}">${stage.status.replace('_', ' ')}</span>
+                </div>
+                
+                <p class="timeline-description">${stage.description}</p>
+                
+                <div class="timeline-agents">
+                    ${stage.agents.map(agent => `
+                        <div class="timeline-agent">
+                            <span>👤</span>
+                            <span>${agent}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="timeline-tasks">
+                    ${stage.tasks.map(task => `
+                        <div class="timeline-task">
+                            <div class="task-status-dot ${task.status.replace('_', '-')}"></div>
+                            <span class="task-name">${task.name}</span>
+                            <span class="task-agent">${task.agent}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(timelineItem);
+    });
+}
+
+// Render Inline Job Stages
+function renderInlineJobStages(stages, currentStage) {
+    const container = document.getElementById('inlineJobStagesContainer');
+    container.innerHTML = '';
+    
+    if (!stages || stages.length === 0) {
+        container.innerHTML = `
+            <div class="timeline-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p>No migration stages yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    stages.forEach((stage, index) => {
+        const timelineItem = document.createElement('div');
+        timelineItem.className = `timeline-item ${stage.status.replace('_', '-')}`;
+        
+        timelineItem.innerHTML = `
+            <div class="timeline-card">
+                <div class="timeline-card-header">
+                    <h3 class="timeline-stage-title">${stage.name}</h3>
+                    <span class="timeline-status ${stage.status.replace('_', '-')}">${stage.status.replace('_', ' ')}</span>
+                </div>
+                
+                <p class="timeline-description">${stage.description}</p>
+                
+                <div class="timeline-agents">
+                    ${stage.agents.map(agent => `
+                        <div class="timeline-agent">
+                            <span>👤</span>
+                            <span>${agent}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="timeline-tasks">
+                    ${stage.tasks.map(task => `
+                        <div class="timeline-task">
+                            <div class="task-status-dot ${task.status.replace('_', '-')}"></div>
+                            <span class="task-name">${task.name}</span>
+                            <span class="task-agent">${task.agent}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(timelineItem);
+    });
+}
+
+// Render Job Logs
+function renderJobLogs(logs) {
+    const container = document.getElementById('jobLogsContainer');
+    container.innerHTML = '';
+    
+    if (logs.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p>No activity logs yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort logs by timestamp (newest first)
+    const sortedLogs = logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    sortedLogs.forEach(log => {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        const timestamp = new Date(log.timestamp).toLocaleTimeString();
+        
+        logEntry.innerHTML = `
+            <div class="log-timestamp">${timestamp}</div>
+            <div class="log-agent">${log.agent}</div>
+            <div class="log-message">${log.message}</div>
+        `;
+        
+        container.appendChild(logEntry);
+    });
+}
+
+// Refresh Job Detail
+async function refreshJobDetail() {
+    const modal = document.getElementById('jobDetailModal');
+    const jobId = modal.dataset.jobId;
+    
+    if (jobId) {
+        await showJobDetail(jobId);
+    }
+}
+
+// ===== CONFIGURATION FUNCTIONS =====
+
+// Switch job detail tabs
+function switchJobDetailTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.job-detail-tabs .tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Show/hide content
+    if (tabName === 'timeline') {
+        document.getElementById('timelineTabContent').style.display = 'block';
+        document.getElementById('configurationTabContent').style.display = 'none';
+    } else {
+        document.getElementById('timelineTabContent').style.display = 'none';
+        document.getElementById('configurationTabContent').style.display = 'block';
+        // Load configuration when switching to config tab
+        loadJobConfiguration();
+    }
+}
+
+// Load job configuration
+async function loadJobConfiguration() {
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    if (!jobId) return;
+    
+    try {
+        const response = await fetch(`/api/jobs/${jobId}/config`);
+        const config = await response.json();
+        
+        // Populate global integrations
+        if (config.global_config && config.global_config.integrations) {
+            const integrations = config.global_config.integrations;
+            
+            // Jira
+            if (integrations.jira) {
+                document.getElementById('jiraEnabled').checked = integrations.jira.enabled || false;
+                document.getElementById('jiraUrl').value = integrations.jira.url || '';
+                document.getElementById('jiraProjectKey').value = integrations.jira.project_key || '';
+                document.getElementById('jiraAuth').value = integrations.jira.auth || '';
+                toggleIntegration('jira');
+            }
+            
+            // Slack
+            if (integrations.slack) {
+                document.getElementById('slackEnabled').checked = integrations.slack.enabled || false;
+                document.getElementById('slackWebhook').value = integrations.slack.webhook_url || '';
+                document.getElementById('slackChannel').value = integrations.slack.channels?.notifications || '#general';
+                document.getElementById('slackAlertChannel').value = integrations.slack.channels?.alerts || '#alerts';
+                toggleIntegration('slack');
+            }
+            
+            // Email
+            if (integrations.email) {
+                document.getElementById('emailEnabled').checked = integrations.email.enabled || false;
+                document.getElementById('emailHost').value = integrations.email.smtp_config?.host || '';
+                document.getElementById('emailPort').value = integrations.email.smtp_config?.port || '587';
+                document.getElementById('emailFrom').value = integrations.email.from_address || '';
+                toggleIntegration('email');
+            }
+        }
+        
+        // Load stage configurations
+        await loadStageConfigurations(config.stage_configs || {});
+        
+    } catch (error) {
+        console.error('Error loading job configuration:', error);
+        showNotification('Failed to load configuration', 'error');
+    }
+}
+
+// Load stage configurations
+async function loadStageConfigurations(stageConfigs) {
+    const container = document.getElementById('stageConfigList');
+    container.innerHTML = '';
+    
+    // Get job stages
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    const response = await fetch(`/api/jobs/${jobId}`);
+    const job = await response.json();
+    
+    if (job.stages) {
+        job.stages.forEach(stage => {
+            const config = stageConfigs[stage.id] || { enabled: true };
+            const item = document.createElement('div');
+            item.className = 'stage-config-item';
+            item.innerHTML = `
+                <div class="stage-config-icon">🔧</div>
+                <div class="stage-config-info">
+                    <div class="stage-config-name">${stage.name}</div>
+                    <div class="stage-config-status">
+                        ${config.enabled ? 'Configured' : 'Not configured'}
+                    </div>
+                </div>
+                <button class="stage-config-action" onclick="editStageConfig('${stage.id}', '${stage.name}')">
+                    ${config.enabled ? 'Edit' : 'Configure'}
+                </button>
+            `;
+            container.appendChild(item);
+        });
+    }
+}
+
+// Toggle integration visibility
+function toggleIntegration(integration) {
+    const enabled = document.getElementById(`${integration}Enabled`).checked;
+    const configDiv = document.getElementById(`${integration}Config`);
+    configDiv.style.display = enabled ? 'block' : 'none';
+}
+
+// Test integration connection
+async function testIntegration(integration) {
+    const config = {};
+    
+    // Gather configuration based on integration type
+    switch (integration) {
+        case 'jira':
+            config.enabled = document.getElementById('jiraEnabled').checked;
+            config.url = document.getElementById('jiraUrl').value;
+            config.project_key = document.getElementById('jiraProjectKey').value;
+            config.auth = document.getElementById('jiraAuth').value;
+            break;
+        case 'slack':
+            config.enabled = document.getElementById('slackEnabled').checked;
+            config.webhook_url = document.getElementById('slackWebhook').value;
+            config.channels = {
+                notifications: document.getElementById('slackChannel').value,
+                alerts: document.getElementById('slackAlertChannel').value
+            };
+            break;
+        case 'email':
+            config.enabled = document.getElementById('emailEnabled').checked;
+            config.smtp_config = {
+                host: document.getElementById('emailHost').value,
+                port: parseInt(document.getElementById('emailPort').value) || 587
+            };
+            config.from_address = document.getElementById('emailFrom').value;
+            break;
+    }
+    
+    try {
+        const response = await fetch('/api/integrations/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: integration, config })
+        });
+        
+        const result = await response.json();
+        
+        // Show test result
+        const card = document.querySelector(`.integration-card[data-integration="${integration}"]`);
+        const existingResult = card.querySelector('.test-result');
+        if (existingResult) existingResult.remove();
+        
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `test-result ${result.success ? 'success' : 'error'}`;
+        resultDiv.innerHTML = `
+            <span class="test-result-icon">${result.success ? '✅' : '❌'}</span>
+            ${result.details?.message || result.error || 'Test completed'}
+        `;
+        
+        card.querySelector('.integration-content').appendChild(resultDiv);
+        
+        // Remove result after 5 seconds
+        setTimeout(() => resultDiv.remove(), 5000);
+        
+    } catch (error) {
+        console.error('Error testing integration:', error);
+        showNotification('Failed to test integration', 'error');
+    }
+}
+
+// Save job configuration
+async function saveJobConfiguration() {
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    if (!jobId) return;
+    
+    // Show loading state
+    const btnText = document.getElementById('saveConfigBtnText');
+    const spinner = document.getElementById('saveConfigSpinner');
+    btnText.style.display = 'none';
+    spinner.style.display = 'block';
+    
+    try {
+        // Gather configuration
+        const config = {
+            job_id: jobId,
+            global_config: {
+                integrations: {
+                    jira: {
+                        enabled: document.getElementById('jiraEnabled').checked,
+                        url: document.getElementById('jiraUrl').value,
+                        project_key: document.getElementById('jiraProjectKey').value,
+                        auth: document.getElementById('jiraAuth').value
+                    },
+                    slack: {
+                        enabled: document.getElementById('slackEnabled').checked,
+                        webhook_url: document.getElementById('slackWebhook').value,
+                        channels: {
+                            notifications: document.getElementById('slackChannel').value,
+                            alerts: document.getElementById('slackAlertChannel').value
+                        }
+                    },
+                    email: {
+                        enabled: document.getElementById('emailEnabled').checked,
+                        from_address: document.getElementById('emailFrom').value,
+                        smtp_config: {
+                            host: document.getElementById('emailHost').value,
+                            port: parseInt(document.getElementById('emailPort').value) || 587
+                        }
+                    }
+                },
+                defaults: {
+                    timeout_minutes: 30,
+                    retry_attempts: 3,
+                    notification_level: 'all'
+                }
+            },
+            stage_configs: {}  // Will be populated when implementing stage config
+        };
+        
+        const response = await fetch(`/api/jobs/${jobId}/config`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Configuration saved successfully', 'success');
+        } else {
+            showNotification(result.error || 'Failed to save configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving configuration:', error);
+        showNotification('Failed to save configuration', 'error');
+    } finally {
+        // Hide loading state
+        btnText.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+// Edit stage configuration
+function editStageConfig(stageId, stageName) {
+    // This would open a modal or inline editor for stage-specific config
+    showNotification(`Stage configuration for ${stageName} - Coming soon!`, 'info');
+}
+
+// Load configuration template
+async function loadConfigurationTemplate() {
+    try {
+        const response = await fetch('/api/config/templates?type=global');
+        const templates = await response.json();
+        
+        // For now, just show available templates
+        if (templates.length > 0) {
+            showNotification(`${templates.length} templates available`, 'info');
+        } else {
+            showNotification('No templates available', 'info');
+        }
+    } catch (error) {
+        console.error('Error loading templates:', error);
+        showNotification('Failed to load templates', 'error');
+    }
+}
+
+// ===== CREDENTIALS FUNCTIONS =====
+
+// Switch settings tab
+function switchSettingsTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.settings-tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.closest('.settings-tab-button').classList.add('active');
+    
+    // Show/hide content
+    document.querySelectorAll('.settings-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(tabName + 'Tab').classList.add('active');
+    
+    // Load data for the tab
+    if (tabName === 'credentials') {
+        loadCredentials();
+    } else if (tabName === 'connections') {
+        loadConnections();
+    }
+}
+
+// Load credentials
+// Component: Render Credential Card
+function renderCredentialCard(credential) {
+    const statusText = {
+        'active': 'Connected',
+        'error': 'Error',
+        'unchecked': 'Not tested'
+    };
+    
+    const escapedName = credential.name.replace(/'/g, "\\'");
+    const icon = getEnhancedCredentialIcon(credential.type);
+    const formattedType = credential.type.replace('_', ' ').toLowerCase();
+    
+    return `
+        <div class="credential-card" data-id="${credential.id}" data-type="${credential.type}">
+            <div class="credential-card-header">
+                <div class="credential-info">
+                    <div class="credential-name">${credential.name}</div>
+                    <div class="credential-type">
+                        <span class="credential-icon">${icon}</span>
+                        ${formattedType}
+                    </div>
+                </div>
+            </div>
+            <div class="credential-status ${credential.status || 'unchecked'}">
+                ${statusText[credential.status] || statusText['unchecked']}
+            </div>
+            <div class="credential-card-footer">
+                <button class="credential-action" onclick="testCredential('${credential.id}')">Test</button>
+                <button class="credential-action" onclick="editCredential('${credential.id}')">Edit</button>
+                <button class="credential-action" onclick="deleteCredential('${credential.id}', '${escapedName}')">Delete</button>
+            </div>
+        </div>
+    `;
+}
+
+// Load and Display Credentials
+async function loadCredentials() {
+    console.log('loadCredentials() called');
+    try {
+        const response = await fetch('/api/credentials');
+        console.log('Credentials API response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const credentials = await response.json();
+        console.log('Credentials loaded:', credentials);
+        
+        const grid = document.getElementById('credentialsGrid');
+        const emptyState = document.getElementById('credentialsEmpty');
+        
+        if (!grid) {
+            console.error('credentialsGrid element not found!');
+            return;
+        }
+        
+        if (!emptyState) {
+            console.error('credentialsEmpty element not found!');
+            return;
+        }
+        
+        if (credentials.length === 0) {
+            console.log('No credentials found, showing empty state');
+            grid.style.display = 'none';
+            emptyState.style.display = 'block';
+        } else {
+            console.log(`Displaying ${credentials.length} credentials`);
+            grid.style.display = 'grid';
+            emptyState.style.display = 'none';
+            
+            // Use component function to render each credential
+            grid.innerHTML = credentials.map(renderCredentialCard).join('');
+        }
+    } catch (error) {
+        console.error('Error loading credentials:', error);
+        showNotification('Failed to load credentials', 'error');
+    }
+}
+
+// Show add credential modal
+async function showAddCredentialModal() {
+    document.getElementById('addCredentialModal').classList.add('show');
+    // Reset form
+    document.getElementById('credentialName').value = '';
+    document.getElementById('credentialForm').style.display = 'none';
+    document.getElementById('credentialFields').innerHTML = '';
+    document.getElementById('saveCredentialBtn').disabled = true;
+    document.getElementById('credentialTypeSearch').value = '';
+    
+    // Load credential types
+    await loadCredentialTypes();
+}
+
+// Load credential types organized by category
+async function loadCredentialTypes() {
+    try {
+        const response = await fetch('/api/credentials/types');
+        const types = await response.json();
+        
+        // Organize types by category
+        const categories = {
+            'project_management': { name: 'Project Management', types: [] },
+            'version_control': { name: 'Version Control', types: [] },
+            'communication': { name: 'Communication', types: [] },
+            'database': { name: 'Databases', types: [] },
+            'cloud': { name: 'Cloud Services', types: [] },
+            'api': { name: 'APIs & Authentication', types: [] },
+            'other': { name: 'Other Services', types: [] },
+            'custom': { name: 'Custom', types: [] }
+        };
+        
+        // Group types by category
+        Object.entries(types).forEach(([key, config]) => {
+            const category = config.category || 'other';
+            if (categories[category]) {
+                categories[category].types.push({ key, ...config });
+            }
+        });
+        
+        // Render categories
+        const container = document.getElementById('credentialTypesContainer');
+        container.innerHTML = '';
+        
+        Object.entries(categories).forEach(([categoryKey, category]) => {
+            if (category.types.length === 0) return;
+            
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'credential-category';
+            categoryDiv.innerHTML = `
+                <div class="credential-category-title">${category.name}</div>
+                <div class="credential-types-grid">
+                    ${category.types.map(type => `
+                        <div class="credential-type-card" onclick="selectCredentialType('${type.key}')" data-type="${type.key}">
+                            <span class="type-icon">${type.icon}</span>
+                            <span class="type-name">${type.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(categoryDiv);
+        });
+    } catch (error) {
+        console.error('Error loading credential types:', error);
+        document.getElementById('credentialTypesContainer').innerHTML = 
+            '<div class="error-message">Failed to load credential types</div>';
+    }
+}
+
+// Filter credential types
+function filterCredentialTypes() {
+    const searchTerm = document.getElementById('credentialTypeSearch').value.toLowerCase();
+    const cards = document.querySelectorAll('.credential-type-card');
+    const categories = document.querySelectorAll('.credential-category');
+    
+    cards.forEach(card => {
+        const typeName = card.querySelector('.type-name').textContent.toLowerCase();
+        const shouldShow = typeName.includes(searchTerm);
+        card.style.display = shouldShow ? '' : 'none';
+    });
+    
+    // Hide empty categories
+    categories.forEach(category => {
+        const visibleCards = category.querySelectorAll('.credential-type-card:not([style*="display: none"])');
+        category.style.display = visibleCards.length > 0 ? '' : 'none';
+    });
+}
+
+// Select credential type
+let selectedCredentialType = null;
+
+async function selectCredentialType(type) {
+    selectedCredentialType = type;
+    
+    // Update UI
+    document.querySelectorAll('.credential-type-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelector(`.credential-type-card[data-type="${type}"]`).classList.add('selected');
+    
+    // Show form
+    document.getElementById('credentialForm').style.display = 'block';
+    document.getElementById('saveCredentialBtn').disabled = false;
+    
+    // Load fields for this type
+    try {
+        const response = await fetch('/api/credentials/types');
+        const types = await response.json();
+        const typeConfig = types[type];
+        
+        if (typeConfig && typeConfig.fields) {
+            const fieldsContainer = document.getElementById('credentialFields');
+            fieldsContainer.innerHTML = typeConfig.fields.map(field => `
+                <div class="form-group">
+                    <label>${field.label}</label>
+                    <input 
+                        type="${field.type}" 
+                        id="field_${field.key}" 
+                        placeholder="${field.placeholder}" 
+                        class="form-input"
+                        ${field.type === 'number' ? 'min="1" max="65535"' : ''}
+                    >
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading credential fields:', error);
+    }
+}
+
+// Save credential
+async function saveCredential() {
+    const name = document.getElementById('credentialName').value.trim();
+    if (!name) {
+        showNotification('Please enter a credential name', 'error');
+        return;
+    }
+    
+    if (!selectedCredentialType) {
+        showNotification('Please select a credential type', 'error');
+        return;
+    }
+    
+    // Gather field values
+    const data = {};
+    const inputs = document.querySelectorAll('#credentialFields input');
+    inputs.forEach(input => {
+        const key = input.id.replace('field_', '');
+        data[key] = input.value;
+    });
+    
+    // Show loading state
+    const btnText = document.getElementById('saveCredentialBtnText');
+    const spinner = document.getElementById('saveCredentialSpinner');
+    btnText.style.display = 'none';
+    spinner.style.display = 'block';
+    
+    try {
+        const response = await fetch('/api/credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                type: selectedCredentialType,
+                data: data
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Credential saved successfully', 'success');
+            closeModal('addCredentialModal');
+            loadCredentials();
+        } else {
+            showNotification(result.error || 'Failed to save credential', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving credential:', error);
+        showNotification('Failed to save credential', 'error');
+    } finally {
+        btnText.style.display = 'inline';
+        spinner.style.display = 'none';
+    }
+}
+
+// Test credential
+async function testCredential(credentialId) {
+    try {
+        const response = await fetch(`/api/credentials/${credentialId}/test`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message || 'Connection successful', 'success');
+            // Reload to update status
+            loadCredentials();
+        } else {
+            showNotification(result.message || 'Connection failed', 'error');
+        }
+    } catch (error) {
+        console.error('Error testing credential:', error);
+        showNotification('Failed to test credential', 'error');
+    }
+}
+
+// Edit credential
+function editCredential(credentialId) {
+    showNotification('Edit credential - Coming soon!', 'info');
+}
+
+// Delete credential
+async function deleteCredential(credentialId, credentialName) {
+    if (confirm(`Are you sure you want to delete the credential "${credentialName}"? This action cannot be undone.`)) {
+        try {
+            const response = await fetch(`/api/credentials/${credentialId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                showNotification('Credential deleted successfully', 'success');
+                loadCredentials();
+            } else {
+                showNotification('Failed to delete credential', 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting credential:', error);
+            showNotification('Failed to delete credential', 'error');
+        }
+    }
+}
+
+// Component: Render Connection Item
+function renderConnectionItem(credential) {
+    const icon = getEnhancedCredentialIcon(credential.type);
+    return `
+        <div class="connection-item" data-type="${credential.type}">
+            <div class="connection-icon">${icon}</div>
+            <div class="connection-info">
+                <div class="connection-name">${credential.name}</div>
+                <div class="connection-details">${credential.type.replace('_', ' ').toUpperCase()}</div>
+            </div>
+            <div class="connection-status">
+                <div class="status-indicator ${getConnectionStatus(credential.status)}">
+                    <span class="status-dot"></span>
+                    <span>${getConnectionStatusText(credential.status)}</span>
+                </div>
+                <button class="connection-test-btn" onclick="testCredential('${credential.id}')">
+                    Test Connection
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Component: Render Empty Connections State
+function renderEmptyConnectionsState() {
+    return `
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <h5>No Connections</h5>
+            <p>Add credentials first to see connection status</p>
+        </div>
+    `;
+}
+
+// Load and Display Connections
+async function loadConnections() {
+    try {
+        const response = await fetch('/api/credentials');
+        const credentials = await response.json();
+        
+        const container = document.getElementById('connectionsList');
+        
+        if (credentials.length === 0) {
+            container.innerHTML = renderEmptyConnectionsState();
+        } else {
+            // Use component function to render each connection
+            container.innerHTML = credentials.map(renderConnectionItem).join('');
+        }
+    } catch (error) {
+        console.error('Error loading connections:', error);
+        showNotification('Failed to load connections', 'error');
+    }
+}
+
+// Helper functions
+function getConnectionStatus(status) {
+    switch (status) {
+        case 'active': return 'connected';
+        case 'error': return 'disconnected';
+        default: return 'checking';
+    }
+}
+
+function getCredentialIcon(type) {
+    const icons = {
+        'jira': '🎫',
+        'slack': '💬',
+        'email': '📧',
+        'github': '🐙',
+        'teams': '👥',
+        'postgresql': '🐘'
+    };
+    return icons[type] || '🔑';
+}
+
+// Enhanced icons for connections
+function getEnhancedCredentialIcon(type) {
+    const icons = {
+        // Project Management - Gold/Yellow theme
+        'jira': '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M3 3h18l-3 9 3 9H3l3-9z"/></svg>',
+        'jira_local': '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l9-4 9 4M12 3v4"/></svg>',
+        
+        // Version Control - Purple theme
+        'github': '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>',
+        'gitlab': '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 0 1 4.82 2a.43.43 0 0 1 .58 0 .42.42 0 0 1 .11.18l2.44 7.49h8.1l2.44-7.51A.42.42 0 0 1 18.6 2a.43.43 0 0 1 .58 0 .42.42 0 0 1 .11.18l2.44 7.51L23 13.45a.84.84 0 0 1-.35.94z"/></svg>',
+        'bitbucket': '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M3.6 3a.83.83 0 0 0-.8.9l2.5 15.3a1 1 0 0 0 1 .8h11.4a.83.83 0 0 0 .8-.7l2.5-15.4a.83.83 0 0 0-.8-.9H3.6zM9 14l3-6 3 6H9z"/></svg>',
+        
+        // Communication - Blue theme
+        'slack': '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>',
+        'teams': '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>',
+        'email': '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>',
+        
+        // Databases - Teal theme
+        'postgresql': '<svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+        'mysql': '<svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M12 12v7"/></svg>',
+        'mongodb': '<svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+        'redis': '<svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>',
+        'oracle': '<svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg>',
+        'sqlserver': '<svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+        
+        // Cloud Services - Pink theme
+        'aws': '<svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2"><path d="M2 18h20l-2-6 2-6H2l2 6z"/><path d="M6 12h12"/></svg>',
+        's3': '<svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+        'azure': '<svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2"><path d="M6 2L3 8l7.5 13h7.5L6 2z"/><path d="M13 2l5 7-5 12H5.5L13 2z"/></svg>',
+        'azure_storage': '<svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>',
+        'gcp': '<svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
+        'gcs': '<svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/><ellipse cx="12" cy="12" rx="10" ry="4"/></svg>',
+        
+        // APIs - Amber theme
+        'rest_api': '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M21 12h-8l-3.5-3.5"/><path d="M9.5 5.5L3 12l6.5 6.5"/><path d="M21 12v7a2 2 0 0 1-2 2H5"/></svg>',
+        'graphql': '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2"/><line x1="2" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="22" y2="7"/><line x1="12" y1="12" x2="12" y2="22"/><line x1="12" y1="12" x2="2" y2="17"/><line x1="12" y1="12" x2="22" y2="17"/><circle cx="12" cy="12" r="3"/></svg>',
+        'oauth2': '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><line x1="22" y1="11" x2="18" y2="11"/><line x1="20" y1="9" x2="20" y2="13"/></svg>',
+        
+        // Other Services - Violet theme
+        'docker': '<svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><path d="M10 14h4V9h-4z"/><path d="M16 14h4V9h-4z"/><path d="M4 14h4V9H4z"/><path d="M10 8h4V3h-4z"/><path d="M21 14h.01"/><path d="M3 18c1.5 2 4 3 7 3 5.5 0 10-2.2 10-7.1 0 0 1 0 2-1"/></svg>',
+        'kubernetes': '<svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><path d="M12 2l-3.5 6h7L12 2z"/><path d="M12 8v8"/><path d="M8 14l-6 3.5L8 21l4-3 4 3 6-3.5L16 14"/><path d="M8 14v4l4 3"/><path d="M16 14v4l-4 3"/><path d="M8 14l4-2 4 2"/></svg>',
+        'jenkins': '<svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><path d="M16 22h3a2 2 0 0 0 2-2V7.5L14.5 1H6a2 2 0 0 0-2 2v3"/><polyline points="14 1 14 8 21 8"/><path d="M3 15h6"/><path d="M3 18h6"/><path d="M3 21h6"/><circle cx="3" cy="15" r="0.5"/><circle cx="3" cy="18" r="0.5"/><circle cx="3" cy="21" r="0.5"/></svg>',
+        
+        // Custom - Gray theme
+        'custom': '<svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>'
+    };
+    return icons[type] || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>';
+}
+
+function getConnectionStatusText(status) {
+    switch (status) {
+        case 'active': return 'Connected';
+        case 'error': return 'Disconnected';
+        default: return 'Not tested';
+    }
+}
+
+// Test all connections
+async function testAllConnections() {
+    showNotification('Testing all connections...', 'info');
+    
+    try {
+        const response = await fetch('/api/credentials');
+        const credentials = await response.json();
+        
+        for (const cred of credentials) {
+            await testCredential(cred.id);
+        }
+        
+        // Reload connections view
+        loadConnections();
+    } catch (error) {
+        console.error('Error testing connections:', error);
+        showNotification('Failed to test connections', 'error');
+    }
+}
+
+// Delete Job
+function deleteJob(jobId, jobName) {
+    if (confirm(`Are you sure you want to delete the job "${jobName}"? This action cannot be undone.`)) {
+        fetch(`/api/jobs/${jobId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.error) {
+                showNotification(result.error, 'error');
+            } else {
+                showNotification('Job deleted successfully', 'success');
+                loadJobs();
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting job:', error);
+            showNotification('Failed to delete job', 'error');
         });
     }
 }
