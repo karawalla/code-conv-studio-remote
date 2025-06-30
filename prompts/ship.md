@@ -142,10 +142,21 @@ Each flow in the flows array represents one complete integration pipeline:
 
 ```json
 {
-  "name": "flowNameInCamelCase",  // e.g., "getUserByIdFlow"
-  "components": [],               // Ordered array of activities
-  "groupActivities": [],          // Sub-flows or grouped activities (usually empty)
-  "links": []                     // Connections between components
+  "name": "flowNameInCamelCase",                  // e.g., "getUserByIdFlow"
+  "components": [],                               // Ordered array of activities
+  "groupActivities": [],                          // Sub-flows or grouped activities (usually empty)
+  "links": [],                                    // Connections between components 
+                                                  // Also includes links to error handlers if flowType is "error"
+  "flowType": "flow/sub-flow/error",              // Mandatory. 
+                                                  // "flow" for main integration flow
+                                                  // "sub-flow" for helper/invoked flows
+                                                  // "error" for error handler flows
+  "type": "flow/propogate/continue/global"        // Mandatory.
+                                                  // Use "flow" if flowType is "flow" or "sub-flow"
+                                                  // Use:
+                                                  //   - Use "propogate" → if the corresponding Spring Boot catch block contains a return statement
+                                                  //   - Use "continue"  → if the catch block does not contain a return
+                                                  //   - Use "global"    → if it is a common/global error handler flow
 }
 ```
 
@@ -163,7 +174,7 @@ Each component in a flow MUST contain ALL these fields IN THIS EXACT ORDER:
   "name": "string",                // Unique camelCase identifier (e.g., "getUserByIdListener")
   "parentId": [number],            // Array with single number: [0] for first, [previousSequenceId] for others
   "sequenceId": number,            // Unique sequential ID starting from 1
-  "start": "string",               // "true" for first component, "false" for all others (STRING not boolean)
+  "start": boolean,                // true for first component, false for all others
   "type": "activity",              // Always "activity" for regular components
   "activityDescription": "string", // Human-readable description of component's purpose
   "summary": {                     // Migration tracking (ALL fields required)
@@ -180,18 +191,198 @@ Each component in a flow MUST contain ALL these fields IN THIS EXACT ORDER:
 }
 ```
 
+** The "start" parameter in the component structure should be a Boolean value true/false.
+Eg.
+
+        {
+          "activityType": "HTTP Listener",
+          "activityConfig": "GET /api/users/{id}",
+          "config": "httpListenerConfig",
+          "code": "<http:listener doc:name=\"Listener\" doc:id=\"a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d\" config-ref=\"httpListenerConfig\" path=\"/api/users/{id}\" allowedMethods=\"GET\"/>",
+          "inputBindings": "",
+          "outputBindings": "",
+          "name": "getUserByIdListener",
+          "parentId": [0],
+          "sequenceId": 1,
+          "start": true,
+          "type": "activity",
+          "activityDescription": "Receives HTTP GET request to retrieve user by ID",
+          "summary": {
+            "sourceType": "HTTP Listener",
+            "simType": "HTTP Listener",
+            "target type": "HTTP Listener",
+            "simFound": true,
+            "codeGenerated": true,
+            "packageFound": true,
+            "functionFound": true
+          },
+          "category": "HTTP Listener",
+          "function": "HTTP Listener"
+        }
+
 ## Link Structure
-Links define flow control between components:
+Links define the flow control between components and optionally represent the start/end of try blocks and error flow redirections.:
 
 ```json
 {
-  "conditionType": "always|xpath|otherwise",  // Type of connection
-  "description": "string",                     // What this link does
-  "from": number,                              // Source component's sequenceId
-  "to": number,                                // Target component's sequenceId
-  "xpath": "string"                            // ONLY include for xpath type
+  "conditionType": "always|xpath|otherwise",     // Type of connection
+  "description": "string",                       // What this link does
+  "from": number,                                // Source component's sequenceId
+  "to": number,                                  // Target component's sequenceId
+  "xpath": "string",                             // ONLY include for xpath type
+  "tryRef": "start|end",                         // Optional. Use:
+                                                 // - "start" if this component is the beginning of a try block in Spring Boot
+                                                 // - "end"   if this component ends the try block
+  "errorHandlerRef": "errorFlowName"             // Optional. Reference to the error flow name (used when tryRef is present)
 }
 ```
+
+✅ Try/Catch Block Handling
+
+If the Spring Boot code contains a try-catch block, represent it in the links and flows arrays strictly as follows:
+
+Eg. Java Code
+
+    try {
+            return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        } catch (Exception e) {
+            throw new Exception ("Internal Error Occured", e);
+        }
+
+
+🔗 Links with Try/Catch Handling
+Use tryRef and errorHandlerRef in the links array to mark the start and end of a try block and to reference the corresponding error handler flow.
+
+```json
+[
+  {
+    "conditionType": "always",
+    "description": "Link from Transform Message to Database Select",
+    "from": 2,
+    "to": 3,
+    "tryRef": "start",                              // Required: Mark the start of try block
+    "errorHandlerRef": "getUserByIdErrorHandler_1"  // Required: Reference to error handler flow
+  },
+  {
+    "conditionType": "xpath",
+    "description": "Check if user is found",
+    "from": 3,
+    "to": 4,
+    "xpath": "sizeOf(payload) == 0"                 // Required only for xpath condition
+  },
+  {
+    "conditionType": "otherwise",
+    "description": "User found, set payload",
+    "from": 3,
+    "to": 5,
+    "tryRef": "end",                                // Required: Mark the end of try block
+    "errorHandlerRef": "getUserByIdErrorHandler_1"  // Required: Reference to error handler flow
+  }
+]
+```
+📌 Rule:
+The activity where the try block begins must use "tryRef": "start"
+The activity where the try block ends must use "tryRef": "end"
+Both must include the "errorHandlerRef" pointing to the associated error flow name.
+
+🛠️ Catch Block Representation (Error Flow)
+The corresponding catch block must be represented as a separate flow in the flows array, with "flowType": "error".
+
+```json
+{
+  "name": "getUserByIdErrorHandler_1",             // Must match the errorHandlerRef in links
+  "type": "continue",                              // Use:
+                                                   // - "continue" if catch block has no return
+                                                   // - "propogate" if catch block has return
+  "components": [
+    {
+      "activityType": "Logger",
+      "activityConfig": "",
+      "config": "",
+      "code": "<logger doc:name=\"Log User Id Error\" doc:id=\"f58cc10b-4372-9567-8567-0e02b2c3d484\" level=\"INFO\" message=\"Internal Error Occured\"/>",
+      "inputBindings": "",
+      "outputBindings": "",
+      "name": "Log User Id Error",
+      "parentId": [0],
+      "sequenceId": 1,
+      "start": true,
+      "type": "activity",
+      "activityDescription": "Log User Id Error",
+      "summary": {
+        "sourceType": "System.out.println",
+        "simType": "Logger",
+        "target type": "Logger",
+        "simFound": true,
+        "codeGenerated": true,
+        "packageFound": true,
+        "functionFound": true
+      },
+      "category": "Core",
+      "function": "log"
+    }
+  ],
+  "links": [],
+  "flowType": "error"
+}
+```
+
+🧩 Summary of Enforcement Rules:
+tryRef: "start" → Must be present at the first activity within the try block
+tryRef: "end" → Must be present at the last activity of the try block
+errorHandlerRef → Must refer to the name of the error flow
+Error flow must be of flowType: "error"
+Error flow type must be:
+ - "propogate" if return exists in catch
+ - "continue" if catch block does not return
+ - "global" for global handlers used across multiple flows
+
+
+✅ Global Error Flow
+A common global error handler flow must be generated with:
+ - "flowType": "error"
+ - "type": "global"
+ - One activity of type "Logger" to log generic/global errors.
+
+```json
+{
+  "name": "globalErrorHandler",                  // Required. Fixed name for the global error handler
+  "type": "global",                              // Required. Indicates this is a global handler
+  "components": [
+    {
+      "activityType": "Logger",                  // Required. Only one logger activity allowed
+      "activityConfig": "",
+      "config": "",
+      "code": "<logger doc:name=\"Log Global Error\" doc:id=\"f58cc10b-4372-9567-8567-0e02b2c3d484\" level=\"INFO\" message=\"Error Occured\"/>",
+      "inputBindings": "",
+      "outputBindings": "",
+      "name": "Log Global Error",
+      "parentId": [0],
+      "sequenceId": 1,
+      "start": true,
+      "type": "activity",
+      "activityDescription": "Log Global Error",
+      "summary": {
+        "sourceType": "System.out.println",
+        "simType": "Logger",
+        "target type": "Logger",
+        "simFound": true,
+        "codeGenerated": true,
+        "packageFound": true,
+        "functionFound": true
+      },
+      "category": "Core",
+      "function": "log"
+    }
+  ],
+  "links": [],                                   // Required. Keep empty for global error flows
+  "flowType": "error"                            // Required. Indicates error handling flow
+}
+```
+🧩 Enforcement Rules:
+Always create one and only one global error handler per project.
+Must contain a single logger activity with proper summary and code fields.
+Must be referenced only where applicable for uncaught/global errors (not tied to specific try blocks).
+
 
 ## Global Variables Structure
 **IMPORTANT**: All properties from application.properties or application.yml must be placed under "globalVariables" in the MuleSoft JSON with this EXACT format:
@@ -740,6 +931,29 @@ In JSON "code" field:
 - The frequency should match the Spring Boot @Scheduled configuration
 - **Flow Structure**: @Scheduled method → Scheduler component → rest of the flow logic
 
+#### JMS Listener (for @JmsListener methods)
+**CRITICAL**: If any method in the Spring Boot project contains the @JmsListener annotation, the corresponding MuleSoft flow MUST begin with a JMS Listener component.
+
+```xml
+<jms:listener doc:name="JMS Listener" doc:id="a7b8c9d0-e1f2-3a4b-5c6d-7e8f9a0b1c2d" config-ref="jmsConfig" destination="${jms.queue.name}">
+  <jms:response>
+    <jms:reply-to destination="${jms.response.queue}"/>
+  </jms:response>
+</jms:listener>
+```
+In JSON "code" field:
+```json
+"code": "<jms:listener doc:name=\"JMS Listener\" doc:id=\"a7b8c9d0-e1f2-3a4b-5c6d-7e8f9a0b1c2d\" config-ref=\"jmsConfig\" destination=\"${jms.queue.name}\"><jms:response><jms:reply-to destination=\"${jms.response.queue}\"/></jms:response></jms:listener>"
+```
+
+**MANDATORY Structure Requirements**:
+- The jms:listener tag MUST contain config-ref pointing to a JMS configuration in globalElements
+- The destination attribute should use property placeholders from globalVariables
+- If the Spring method sends a response, include the <jms:response> section
+- The doc:id MUST be a valid UUID v4 format
+- **Flow Structure**: @JmsListener method → JMS Listener component → rest of the flow logic
+- For message-driven beans without HTTP endpoints, this MUST be the flow's starting component
+
 #### File Read
 ```xml
 <file:read doc:name="Read" doc:id="8a5f6e20-b123-4cd5-9876-543210fedcba" config-ref="fileConfig" path="${file.input.path}"/>
@@ -932,7 +1146,7 @@ Ship Format JSON (EXACT format with all required fields):
       "name": "getUserByIdListener",
       "parentId": [0],
       "sequenceId": 1,
-      "start": "true",
+      "start": true,
       "type": "activity",
       "activityDescription": "Receives HTTP GET request for user by ID",
       "summary": {
@@ -957,7 +1171,7 @@ Ship Format JSON (EXACT format with all required fields):
       "name": "transformGetUserById",
       "parentId": [1],
       "sequenceId": 2,
-      "start": "false",
+      "start": false,
       "type": "activity",
       "activityDescription": "Transforms and extracts user ID from URI parameters",
       "summary": {
@@ -982,7 +1196,7 @@ Ship Format JSON (EXACT format with all required fields):
       "name": "dbSelectUserById",
       "parentId": [2],
       "sequenceId": 3,
-      "start": "false",
+      "start": false,
       "type": "activity",
       "activityDescription": "Selects user from database by ID",
       "summary": {
@@ -1007,7 +1221,7 @@ Ship Format JSON (EXACT format with all required fields):
       "name": "raiseErrorUserNotFound",
       "parentId": [3],
       "sequenceId": 4,
-      "start": "false",
+      "start": false,
       "type": "activity",
       "activityDescription": "Raises error if user is not found",
       "summary": {
@@ -1032,7 +1246,7 @@ Ship Format JSON (EXACT format with all required fields):
       "name": "setPayloadUserData",
       "parentId": [3],
       "sequenceId": 5,
-      "start": "false",
+      "start": false,
       "type": "activity",
       "activityDescription": "Sets the payload with user data",
       "summary": {
@@ -1298,7 +1512,7 @@ To ensure compatibility with external processing tools, follow these STRICT rule
 4. **Sequential parentId** - Except for branches
 5. **Valid XML in code** - Must be parseable Mule XML with escaped quotes
 6. **Unique names** - Within each flow
-7. **Start flag** - Only first component is "true" (as string, not boolean)
+7. **Start flag** - Only first component is true (as boolean, not string)
 8. **Empty strings** - Use "" not null for empty fields
 9. **Array for parentId** - Even with single value [0] or [3]
 10. **Complete summary** - All boolean fields must be present
