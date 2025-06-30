@@ -110,6 +110,7 @@ This is the Any-to-Any Code Conversion Studio v2 - a web application for convert
    - Created @ mention system for simplified job creation
    - Removed execute buttons from agents
    - Converted all modals to inline forms
+   - Fixed job edit functionality and modal issues
 
 4. **UI Guidelines**:
    - NO gradients or "shiny" colors
@@ -118,6 +119,18 @@ This is the Any-to-Any Code Conversion Studio v2 - a web application for convert
    - Keep the interface clean and professional
 
 5. **Git Branch**: v2-stage-3
+
+## 📋 UI STRUCTURE DOCUMENTATION
+**IMPORTANT**: Always refer to `/v2/docs/ui-details.md` for:
+- Which files to modify for each screen
+- Button handler locations
+- Modal management
+- Navigation system
+
+**MANDATORY**: After ANY UI changes:
+1. Update `/v2/docs/ui-details.md` with new components/functions
+2. Follow the existing structure and patterns
+3. Document any new button handlers or modals
 
 ## Development Commands
 ```bash
