@@ -66,8 +66,8 @@ class JobsService:
         job_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
         
-        # Define enterprise workflow stages
-        stages = self._create_workflow_stages()
+        # Use provided stages or create default workflow stages
+        stages = job_data.get('stages', self._create_workflow_stages())
         
         job = {
             'id': job_id,
@@ -279,7 +279,8 @@ class JobsService:
         
         # Update allowed fields
         allowed_fields = ['name', 'description', 'status', 'progress', 'current_stage',
-                         'metadata', 'config', 'estimated_completion', 'actual_completion']
+                         'metadata', 'config', 'estimated_completion', 'actual_completion',
+                         'stages', 'source_name', 'target_name']
         
         for field in allowed_fields:
             if field in updates:

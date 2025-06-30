@@ -1,5 +1,19 @@
 // Dashboard JavaScript
 document.addEventListener('DOMContentLoaded', function() {
+    // Close all modals on page load
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+    });
+    document.body.classList.remove('modal-open');
+    
+    // Specifically ensure Edit Agent modal is hidden
+    const editAgentModal = document.getElementById('editAgentModal');
+    if (editAgentModal) {
+        editAgentModal.style.display = 'none';
+        editAgentModal.classList.remove('show');
+    }
+    
     // Initialize dashboard
     initializeDashboard();
     
@@ -388,13 +402,25 @@ function formatDate(dateString) {
 
 // Modal Functions
 function showModal(modalId) {
-    document.getElementById(modalId).classList.add('show');
-    document.body.classList.add('modal-open');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('show');
-    document.body.classList.remove('modal-open');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+    }
+    // Remove modal-open from body only if no other modals are open
+    const openModals = document.querySelectorAll('.modal.show');
+    if (openModals.length === 0) {
+        document.body.classList.remove('modal-open');
+    }
 }
 
 // Update Date/Time
@@ -1838,6 +1864,11 @@ async function loadJobs() {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                 </svg>
                             </button>
+                            <button class="job-action-btn" onclick="event.stopPropagation(); editJob('${job.id}')" title="Edit Job">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
                             <button class="job-action-btn" onclick="event.stopPropagation(); deleteJob('${job.id}', '${job.name}')" title="Delete Job">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -1918,31 +1949,62 @@ async function saveInlineJob() {
     spinner.style.display = 'block';
     
     try {
-        const jobData = {
-            name: nameInput.value.trim(),
-            description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
-            source_id: sourceBtn.dataset.sourceId,
-            source_name: sourceBtn.dataset.sourceName,
-            target_id: targetBtn.dataset.targetId,
-            target_name: targetBtn.dataset.targetName,
-            config: {
-                priority: 'medium'
-            },
-            created_by: 'system'
-        };
+        let response;
+        let result;
         
-        const response = await fetch('/api/jobs', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(jobData)
-        });
-        
-        const result = await response.json();
+        if (window.isEditMode && window.editJobId) {
+            // Update existing job
+            const jobData = {
+                name: nameInput.value.trim(),
+                description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
+                source_id: sourceBtn.dataset.sourceId,
+                source_name: sourceBtn.dataset.sourceName,
+                target_id: targetBtn.dataset.targetId,
+                target_name: targetBtn.dataset.targetName
+            };
+            
+            response = await fetch(`/api/jobs/${window.editJobId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(jobData)
+            });
+            
+            result = await response.json();
+        } else {
+            // Create new job
+            const jobData = {
+                name: nameInput.value.trim(),
+                description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
+                source_id: sourceBtn.dataset.sourceId,
+                source_name: sourceBtn.dataset.sourceName,
+                target_id: targetBtn.dataset.targetId,
+                target_name: targetBtn.dataset.targetName,
+                config: {
+                    priority: 'medium'
+                },
+                created_by: 'system'
+            };
+            
+            response = await fetch('/api/jobs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(jobData)
+            });
+            
+            result = await response.json();
+        }
         
         if (response.ok) {
-            showNotification('Migration job created successfully!', 'success');
+            const successMessage = window.isEditMode ? 'Job updated successfully!' : 'Migration job created successfully!';
+            showNotification(successMessage, 'success');
+            
+            // Reset edit mode
+            window.isEditMode = false;
+            window.editJobId = null;
             
             // Reset form
             nameInput.value = '';
@@ -1954,11 +2016,11 @@ async function saveInlineJob() {
             // Show job detail view directly
             await showInlineJobDetail(result.id);
         } else {
-            showNotification(result.error || 'Failed to create job', 'error');
+            showNotification(result.error || 'Failed to save job', 'error');
         }
     } catch (error) {
-        console.error('Error creating job:', error);
-        showNotification('Failed to create job', 'error');
+        console.error('Error saving job:', error);
+        showNotification('Failed to save job', 'error');
     } finally {
         // Reset button state
         btn.style.display = 'inline';
@@ -2034,27 +2096,47 @@ function getTargetIcon(type) {
 
 // Select source
 function selectSource(id, name, type) {
+    // Check if we're in edit mode
+    if (window.editSourceCallback) {
+        window.editSourceCallback(id, name);
+        window.editSourceCallback = null;
+        closeSelectionModal('source');
+        return;
+    }
+    
     const btn = document.getElementById('sourceSelectionBtn');
     const text = document.getElementById('sourceSelectionText');
     
-    btn.classList.add('selected');
-    text.textContent = name;
-    btn.dataset.sourceId = id;
-    btn.dataset.sourceName = name;
-    btn.dataset.sourceType = type;
+    if (btn && text) {
+        btn.classList.add('selected');
+        text.textContent = name;
+        btn.dataset.sourceId = id;
+        btn.dataset.sourceName = name;
+        btn.dataset.sourceType = type;
+    }
     
     closeSelectionModal('source');
 }
 
 // Select target
 function selectTarget(id, name) {
+    // Check if we're in edit mode
+    if (window.editTargetCallback) {
+        window.editTargetCallback(id, name);
+        window.editTargetCallback = null;
+        closeSelectionModal('target');
+        return;
+    }
+    
     const btn = document.getElementById('targetSelectionBtn');
     const text = document.getElementById('targetSelectionText');
     
-    btn.classList.add('selected');
-    text.textContent = name;
-    btn.dataset.targetId = id;
-    btn.dataset.targetName = name;
+    if (btn && text) {
+        btn.classList.add('selected');
+        text.textContent = name;
+        btn.dataset.targetId = id;
+        btn.dataset.targetName = name;
+    }
     
     closeSelectionModal('target');
 }
@@ -2068,12 +2150,100 @@ function closeSelectionModal(type) {
 // Load Create Job Page
 async function loadCreateJobPage() {
     try {
-        // Reset form
-        document.getElementById('inlineJobName').value = '';
-        document.getElementById('sourceSelectionBtn').classList.remove('selected');
-        document.getElementById('sourceSelectionText').textContent = 'Choose source...';
-        document.getElementById('targetSelectionBtn').classList.remove('selected');
-        document.getElementById('targetSelectionText').textContent = 'Choose target...';
+        // Load sources and targets for the dropdowns
+        await loadCreateJobSources();
+        await loadCreateJobTargets();
+        
+        // Check if we're in edit mode
+        const editJobData = sessionStorage.getItem('editJobData');
+        const editJobId = sessionStorage.getItem('editJobId');
+        
+        if (editJobData && editJobId) {
+            // We're editing an existing job
+            const job = JSON.parse(editJobData);
+            
+            // Update page title to indicate edit mode
+            const pageTitle = document.querySelector('#createJobPage h2');
+            if (pageTitle) {
+                pageTitle.textContent = 'Edit Migration Job Details';
+            }
+            
+            // Populate form with job data
+            const nameInput = document.getElementById('createJobName');
+            if (nameInput) nameInput.value = job.name || '';
+            
+            const descInput = document.getElementById('createJobDescription');
+            if (descInput) descInput.value = job.description || '';
+            
+            // Set source
+            const sourceSelect = document.getElementById('createSourceSelect');
+            if (sourceSelect && job.source_id) {
+                sourceSelect.value = job.source_id;
+            }
+            
+            // Set target
+            const targetSelect = document.getElementById('createTargetSelect');
+            if (targetSelect && job.target_id) {
+                targetSelect.value = job.target_id;
+            }
+            
+            // Store edit mode flag
+            window.isEditMode = true;
+            window.editJobId = editJobId;
+            window.editJobData = job; // Store the full job data
+            
+            // Update save button text if it exists
+            const saveBtn = document.querySelector('#createJobPage .btn-primary');
+            if (saveBtn && saveBtn.textContent.includes('Create')) {
+                saveBtn.textContent = 'Update Job';
+                // Update the onclick to call updateJob instead of saveJob
+                saveBtn.setAttribute('onclick', 'updateJob()');
+            }
+            
+            // Don't add stages here - they should be shown after saving basic info
+            // just like in the create flow
+            
+            // Clear sessionStorage
+            sessionStorage.removeItem('editJobData');
+            sessionStorage.removeItem('editJobId');
+        } else {
+            // Normal create mode - reset form
+            window.isEditMode = false;
+            window.editJobId = null;
+            window.editJobData = null;
+            
+            // Reset page title
+            const pageTitle = document.querySelector('#createJobPage h2');
+            if (pageTitle) {
+                pageTitle.textContent = 'Migration Job Details';
+            }
+            
+            // Reset save button
+            const saveBtn = document.querySelector('#createJobPage .btn-primary');
+            if (saveBtn) {
+                saveBtn.textContent = 'Create Job';
+                saveBtn.setAttribute('onclick', 'saveJob()');
+            }
+            
+            // Remove stages section if it exists
+            const stagesSection = document.getElementById('editJobStages');
+            if (stagesSection) {
+                stagesSection.remove();
+            }
+            
+            // Reset form fields
+            const nameInput = document.getElementById('createJobName');
+            if (nameInput) nameInput.value = '';
+            
+            const descInput = document.getElementById('createJobDescription');
+            if (descInput) descInput.value = '';
+            
+            const sourceSelect = document.getElementById('createSourceSelect');
+            if (sourceSelect) sourceSelect.value = '';
+            
+            const targetSelect = document.getElementById('createTargetSelect');
+            if (targetSelect) targetSelect.value = '';
+        }
     } catch (error) {
         console.error('Error loading create job page:', error);
         showNotification('Failed to load job creation page', 'error');
@@ -2136,6 +2306,81 @@ async function loadCreateJobTargets() {
         });
     } catch (error) {
         console.error('Error loading targets for create job page:', error);
+    }
+}
+
+
+// Update existing job from Create Job Page
+async function updateJob() {
+    const nameInput = document.getElementById('createJobName');
+    const descriptionInput = document.getElementById('createJobDescription');
+    const sourceSelect = document.getElementById('createSourceSelect');
+    const targetSelect = document.getElementById('createTargetSelect');
+    
+    // Validate required fields
+    if (!nameInput.value.trim()) {
+        showNotification('Job name is required', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!sourceSelect.value) {
+        showNotification('Please select a source repository', 'error');
+        sourceSelect.focus();
+        return;
+    }
+    
+    if (!targetSelect.value) {
+        showNotification('Please select a target platform', 'error');
+        targetSelect.focus();
+        return;
+    }
+    
+    try {
+        const jobData = {
+            name: nameInput.value.trim(),
+            description: descriptionInput.value.trim(),
+            source_id: sourceSelect.value,
+            source_name: sourceSelect.options[sourceSelect.selectedIndex].dataset.name,
+            target_id: targetSelect.value,
+            target_name: targetSelect.options[targetSelect.selectedIndex].dataset.name
+        };
+        
+        // Include existing stages if they exist
+        if (window.editJobData && window.editJobData.stages) {
+            jobData.stages = window.editJobData.stages;
+        }
+        
+        const response = await fetch(`/api/jobs/${window.editJobId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jobData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Job updated successfully!', 'success');
+            
+            // Navigate to job detail view to show stages
+            const jobId = window.editJobId;
+            
+            // Reset edit mode
+            window.isEditMode = false;
+            window.editJobId = null;
+            
+            setTimeout(() => {
+                navigateToPage('jobs');
+                showInlineJobDetail(jobId);
+            }, 300);
+        } else {
+            showNotification(result.error || 'Failed to update job', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating job:', error);
+        showNotification('Failed to update job', 'error');
     }
 }
 
@@ -2204,11 +2449,11 @@ async function saveJob() {
             sourceSelect.value = '';
             targetSelect.value = '';
             
-            // Navigate back to jobs page
-            navigateToPage('jobs');
-            
-            // Show job detail modal after a brief delay
-            setTimeout(() => showJobDetail(result.id), 500);
+            // Navigate to job detail view to show stages
+            setTimeout(() => {
+                navigateToPage('jobs');
+                showInlineJobDetail(result.id);
+            }, 300);
         } else {
             showNotification(result.error || 'Failed to create job', 'error');
         }
@@ -2352,6 +2597,12 @@ async function createJob() {
 
 // Show Inline Job Detail
 async function showInlineJobDetail(jobId) {
+    // Close any open modals first
+    document.querySelectorAll('.modal.show').forEach(modal => {
+        modal.classList.remove('show');
+    });
+    document.body.classList.remove('modal-open');
+    
     try {
         const response = await fetch(`/api/jobs/${jobId}`);
         const job = await response.json();
@@ -3609,6 +3860,33 @@ async function testAllConnections() {
 }
 
 // Delete Job
+// Edit job
+async function editJob(jobId) {
+    console.log('Edit job called with ID:', jobId);
+    try {
+        // Load the job data
+        const response = await fetch(`/api/jobs/${jobId}`);
+        if (!response.ok) {
+            throw new Error('Failed to load job data');
+        }
+        
+        const job = await response.json();
+        
+        // Store job data in sessionStorage for the create job page to pick up
+        sessionStorage.setItem('editJobData', JSON.stringify(job));
+        sessionStorage.setItem('editJobId', jobId);
+        
+        // Navigate to create job page
+        window.location.hash = 'createJob';
+        
+    } catch (error) {
+        console.error('Error loading job for edit:', error);
+        showNotification('Failed to load job for editing', 'error');
+    }
+}
+
+// Removed old modal-based edit functions as editing now uses the same create job interface
+
 function deleteJob(jobId, jobName) {
     if (confirm(`Are you sure you want to delete the job "${jobName}"? This action cannot be undone.`)) {
         fetch(`/api/jobs/${jobId}`, {
