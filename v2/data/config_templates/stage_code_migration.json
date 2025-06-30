@@ -1,0 +1,31 @@
+{
+  "id": "stage_code_migration",
+  "name": "Code Migration Configuration",
+  "type": "stage",
+  "version": "1.0",
+  "config": {
+    "timeout_minutes": 240,
+    "parallel_files": 5,
+    "batch_size": 10,
+    "integrations": {
+      "jira": {
+        "enabled": true,
+        "update_on_progress": true,
+        "progress_interval": 10,
+        "transition_on_start": "In Progress",
+        "transition_on_complete": "Code Review"
+      },
+      "slack": {
+        "enabled": true,
+        "progress_updates": true,
+        "error_notifications": true,
+        "channel_override": "#migration-progress"
+      }
+    },
+    "validation": {
+      "syntax_check": true,
+      "dependency_check": true,
+      "test_generation": true
+    }
+  }
+}

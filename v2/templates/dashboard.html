@@ -7,11 +7,52 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=9">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/liquid-glass.css') }}?v=4">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/targets.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/agents.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jobs.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/config.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/credentials.css') }}?v=1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Selection Modals -->
+    <div id="sourceSelectionModal" class="selection-modal">
+        <div class="selection-modal-content">
+            <div class="selection-modal-header">
+                <h3>Select Source</h3>
+                <button class="selection-modal-close" onclick="closeSelectionModal('source')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="selection-modal-body">
+                <div class="selection-grid" id="sourceSelectionGrid">
+                    <!-- Source cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="targetSelectionModal" class="selection-modal">
+        <div class="selection-modal-content">
+            <div class="selection-modal-header">
+                <h3>Select Target</h3>
+                <button class="selection-modal-close" onclick="closeSelectionModal('target')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="selection-modal-body">
+                <div class="selection-grid" id="targetSelectionGrid">
+                    <!-- Target cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SVG Filters for Liquid Glass Effect -->
     <svg style="position: absolute; width: 0; height: 0;">
         <defs>
@@ -302,7 +343,7 @@
                             <!-- <h3>AI Agents</h3> -->
                             <p>Configure and manage AI agents for automated conversions</p>
                         </div>
-                        <button class="btn btn-primary liquid-glass">
+                        <button class="btn btn-primary liquid-glass" onclick="showAddAgentModal()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                             </svg>
@@ -310,15 +351,8 @@
                         </button>
                     </div>
                     
-                    <div class="agents-container">
-                        <div class="empty-state liquid-glass">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            </svg>
-                            <h4>No agents configured</h4>
-                            <p>AI agents will help automate your conversion workflows</p>
-                            <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--gray-500);">Coming soon...</p>
-                        </div>
+                    <div class="agents-container" id="agentsContainer">
+                        <!-- Agents will be loaded here dynamically -->
                     </div>
                 </div>
                 
@@ -353,7 +387,7 @@
                         </select>
                     </div>
                     
-                    <div class="jobs-table">
+                    <div class="jobs-table" id="jobsTableContainer">
                         <table>
                             <thead>
                                 <tr>
@@ -371,6 +405,108 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Inline Create Job Form -->
+                    <div class="inline-create-job" id="inlineCreateJob" style="display: none;">
+                        <div class="create-job-header">
+                            <h3>Create New Migration Job</h3>
+                            <p>Quick setup with @ mentions</p>
+                        </div>
+                        
+                        <div class="create-job-form simplified">
+                            <div class="form-group">
+                                <label>Job Name</label>
+                                <input type="text" id="inlineJobName" placeholder="Spring to Rust Migration" class="form-input liquid-glass">
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Source</label>
+                                    <button type="button" class="selection-button" id="sourceSelectionBtn" onclick="showSourceSelection()">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z"/>
+                                        </svg>
+                                        <span id="sourceSelectionText">Choose source...</span>
+                                    </button>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Target</label>
+                                    <button type="button" class="selection-button" id="targetSelectionBtn" onclick="showTargetSelection()">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-3-3-3 3v-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h2m0-4v4m0 0h6m-6 0H9"/>
+                                        </svg>
+                                        <span id="targetSelectionText">Choose target...</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            
+                            <div class="form-actions">
+                                <button class="btn btn-secondary" onclick="cancelInlineJob()">Cancel</button>
+                                <button class="btn btn-primary" onclick="saveInlineJob()">
+                                    <span id="inlineSaveJobBtnText">Create Job</span>
+                                    <div class="spinner" id="inlineSaveJobSpinner" style="display: none;"></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Inline Job Detail View -->
+                    <div class="inline-job-detail" id="inlineJobDetail" style="display: none;">
+                        <div class="timeline-header">
+                            <button class="btn btn-secondary" onclick="closeInlineJobDetail()" style="position: absolute; right: 20px; top: 20px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px; margin-right: 5px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m0 7h18"/>
+                                </svg>
+                                Back to Jobs
+                            </button>
+                            <div class="timeline-title-section">
+                                <div class="timeline-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 id="inlineJobDetailName">Migration Timeline</h2>
+                                    <p id="inlineJobDetailDescription">Track your migration progress</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        
+                        <div class="timeline-body" id="timelineTabContent">
+                            <div class="timeline-meta">
+                                <div class="meta-pill">
+                                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z"/>
+                                    </svg>
+                                    <span id="inlineJobDetailSource">Source</span>
+                                </div>
+                                <div class="meta-pill">
+                                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-3-3-3 3v-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h2m0-4v4m0 0h6m-6 0H9"/>
+                                    </svg>
+                                    <span id="inlineJobDetailTarget">Target</span>
+                                </div>
+                                <div class="meta-pill">
+                                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span id="inlineJobDetailCreated">Created</span>
+                                </div>
+                            </div>
+                            
+                            <div id="inlineJobDetailCredentials" style="display: none; margin: 1.5rem 0;">
+                                <!-- Linked credentials will be shown here -->
+                            </div>
+                            
+                            <div class="timeline-container" id="inlineJobStagesContainer">
+                                <!-- Timeline items will be populated here -->
+                            </div>
+                        </div>
+                        
+                    </div>
                 </div>
                 
                 <!-- Settings Page -->
@@ -378,42 +514,137 @@
                     <div class="page-header">
                         <div>
                             <!-- <h3>Settings</h3> -->
-                            <p>Configure application settings and preferences</p>
+                            <p>Manage credentials, connections, and preferences</p>
                         </div>
                     </div>
                     
-                    <div class="settings-content">
-                        <div class="settings-section">
-                            <h4>General Settings</h4>
-                            <div class="setting-item">
-                                <label>Application Name</label>
-                                <input type="text" value="Any-to-Any Conversion Studio" class="form-input">
+                    <div class="settings-tabs">
+                        <div class="settings-tab-buttons">
+                            <button class="settings-tab-button active" onclick="switchSettingsTab('credentials')">
+                                <span class="tab-icon">🔑</span>
+                                Credentials
+                            </button>
+                            <button class="settings-tab-button" onclick="switchSettingsTab('connections')">
+                                <span class="tab-icon">🔌</span>
+                                Connections
+                            </button>
+                        </div>
+                        
+                        <!-- Credentials Tab -->
+                        <div class="settings-tab-content active" id="credentialsTab">
+                            <div class="credentials-header">
+                                <h4>Manage Credentials</h4>
+                                <button class="btn btn-primary" onclick="showAddCredentialModal()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px; margin-right: 5px;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Add Credential
+                                </button>
                             </div>
-                            <div class="setting-item">
-                                <label>Default Timeout (minutes)</label>
-                                <input type="number" value="30" class="form-input">
+                            
+                            <div class="credentials-grid" id="credentialsGrid">
+                                <!-- Credentials will be loaded here -->
+                            </div>
+                            
+                            <div class="empty-state" id="credentialsEmpty" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                                </svg>
+                                <h5>No Credentials Yet</h5>
+                                <p>Add your first credential to get started</p>
+                                <button class="btn btn-primary" onclick="showAddCredentialModal()">Add Credential</button>
                             </div>
                         </div>
                         
-                        <div class="settings-section">
-                            <h4>Notifications</h4>
-                            <div class="setting-item">
-                                <label class="toggle-label">
-                                    <input type="checkbox" checked>
-                                    <span>Email notifications for completed jobs</span>
-                                </label>
+                        <!-- Connections Tab -->
+                        <div class="settings-tab-content" id="connectionsTab">
+                            <div class="connections-header">
+                                <h4>Connection Status</h4>
+                                <button class="btn btn-secondary" onclick="testAllConnections()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px; margin-right: 5px;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    Test All
+                                </button>
                             </div>
-                            <div class="setting-item">
-                                <label class="toggle-label">
-                                    <input type="checkbox" checked>
-                                    <span>Alert on job failures</span>
-                                </label>
+                            
+                            <div class="connections-list" id="connectionsList">
+                                <!-- Connection status will be shown here -->
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Create Job Page -->
+                <div id="createJobPage" class="page">
+                    <div class="page-header">
+                        <div>
+                            <p>Create a new migration job with source and target configuration</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="navigateToPage('jobs')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m0 7h18"/>
+                            </svg>
+                            Back to Jobs
+                        </button>
+                    </div>
+                    
+                    <div class="create-job-container">
+                        <div class="job-form-header">
+                            <h2>Migration Job Details</h2>
+                            <p>Configure your migration project settings</p>
+                        </div>
                         
-                        <div class="settings-actions">
-                            <button class="btn btn-primary">Save Settings</button>
-                            <button class="btn btn-secondary">Cancel</button>
+                        <div class="job-form-content">
+                            <div class="form-section">
+                                <div class="form-field">
+                                    <label class="field-label">Job Name</label>
+                                    <input type="text" id="createJobName" placeholder="E-commerce API Migration" class="form-input liquid-glass">
+                                </div>
+                                
+                                <div class="form-field">
+                                    <label class="field-label">Description</label>
+                                    <textarea id="createJobDescription" rows="4" placeholder="Migrate our e-commerce API from Spring Boot to modern microservices architecture..." class="form-input liquid-glass"></textarea>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label class="field-label">Source Repository</label>
+                                        <div class="select-container">
+                                            <select id="createSourceSelect" class="form-input liquid-glass">
+                                                <option value="">Choose source repository...</option>
+                                            </select>
+                                            <div class="select-arrow">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-field">
+                                        <label class="field-label">Target Platform</label>
+                                        <div class="select-container">
+                                            <select id="createTargetSelect" class="form-input liquid-glass">
+                                                <option value="">Choose target platform...</option>
+                                            </select>
+                                            <div class="select-arrow">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button class="btn btn-secondary" onclick="navigateToPage('jobs')">Cancel</button>
+                                <button class="btn btn-primary" onclick="saveJob()">
+                                    <span id="saveJobBtnText">Save Migration Job</span>
+                                    <div class="spinner" id="saveJobSpinner" style="display: none;"></div>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -423,49 +654,107 @@
     
     <!-- Modals -->
     <div id="newJobModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Create New Conversion Job</h3>
-                <button class="modal-close" onclick="closeModal('newJobModal')">&times;</button>
+        <div class="modal-content beautiful-modal">
+            <div class="modal-header-beautiful">
+                <h2>Create Migration Job</h2>
+                <button class="close-btn" onclick="closeModal('newJobModal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Job Name</label>
-                    <input type="text" placeholder="Enter job name" class="form-input">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Source Framework</label>
-                        <select class="form-input">
-                            <option>Select source...</option>
-                            <option>Java Spring Boot</option>
-                            <option>Python Django</option>
-                            <option>Node.js Express</option>
-                        </select>
+            
+            <div class="modal-body-beautiful">
+                <div class="beautiful-form">
+                    <div class="form-field">
+                        <label class="field-label">Job Name</label>
+                        <input type="text" id="jobName" placeholder="E-commerce API Migration" class="beautiful-input">
                     </div>
-                    <div class="form-group">
-                        <label>Target Platform</label>
-                        <select class="form-input">
-                            <option>Select target...</option>
-                            <option>Sage IT</option>
-                            <option>AWS Lambda</option>
-                            <option>Kubernetes</option>
-                        </select>
+                    
+                    <div class="form-field">
+                        <label class="field-label">Description</label>
+                        <textarea id="jobDescription" rows="3" placeholder="Migrate our e-commerce API from Spring Boot to modern microservices..." class="beautiful-input beautiful-textarea"></textarea>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Upload Source Files</label>
-                    <div class="file-upload-area">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                        </svg>
-                        <p>Drop files here or click to browse</p>
+                    
+                    <div class="form-row-beautiful">
+                        <div class="form-field">
+                            <label class="field-label">Source Repository</label>
+                            <div class="beautiful-select-container">
+                                <select id="sourceSelect" class="beautiful-select">
+                                    <option value="">Choose source...</option>
+                                </select>
+                                <div class="select-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-field">
+                            <label class="field-label">Target Platform</label>
+                            <div class="beautiful-select-container">
+                                <select id="targetSelect" class="beautiful-select">
+                                    <option value="">Choose target...</option>
+                                </select>
+                                <div class="select-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('newJobModal')">Cancel</button>
-                <button class="btn btn-primary">Create Job</button>
+            
+            <div class="modal-footer-beautiful">
+                <button class="btn-beautiful btn-cancel" onclick="closeModal('newJobModal')">Cancel</button>
+                <button class="btn-beautiful btn-continue" onclick="createJob()">
+                    <span id="createJobBtnText">Continue</span>
+                    <div class="loading-spinner" id="createJobSpinner" style="display: none;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Job Detail Modal -->
+    <div id="jobDetailModal" class="modal">
+        <div class="modal-content beautiful-timeline-modal">
+            <div class="timeline-header">
+                <div class="timeline-title-section">
+                    <div class="timeline-icon">⚡</div>
+                    <div>
+                        <h2 id="jobDetailName">Migration Timeline</h2>
+                        <p id="jobDetailDescription">Track your migration progress</p>
+                    </div>
+                </div>
+                <button class="close-btn" onclick="closeModal('jobDetailModal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="timeline-body">
+                <div class="timeline-meta">
+                    <div class="meta-pill">
+                        <span class="meta-icon">📁</span>
+                        <span id="jobDetailSource">Source</span>
+                    </div>
+                    <div class="meta-pill">
+                        <span class="meta-icon">🎯</span>
+                        <span id="jobDetailTarget">Target</span>
+                    </div>
+                    <div class="meta-pill">
+                        <span class="meta-icon">📅</span>
+                        <span id="jobDetailCreated">Created</span>
+                    </div>
+                </div>
+                
+                <div class="timeline-container" id="jobStagesContainer">
+                    <!-- Timeline items will be populated here -->
+                </div>
             </div>
         </div>
     </div>
@@ -889,6 +1178,151 @@
                     <span id="saveTargetBtnText">Save Changes</span>
                     <div class="spinner" id="saveTargetSpinner" style="display: none;"></div>
                 </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Agent Modal -->
+    <div id="addAgentModal" class="modal">
+        <div class="modal-content liquid-glass" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Add New Agent</h3>
+                <button class="close-btn" onclick="closeModal('addAgentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Agent Name</label>
+                    <input type="text" id="newAgentName" class="form-control" placeholder="e.g., Custom Code Architect">
+                </div>
+                
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="newAgentRole" class="form-control" onchange="updateCapabilitiesSuggestions()">
+                        <option value="custom">Custom</option>
+                        <option value="architect">Code Architect</option>
+                        <option value="engineer">Code Engineer</option>
+                        <option value="writer">Technical Writer</option>
+                        <option value="manager">Project Manager</option>
+                        <option value="scrum_master">Scrum Master</option>
+                        <option value="devops">DevOps Engineer</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="newAgentDescription" class="form-control" rows="3" placeholder="Describe the agent's responsibilities..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Avatar (Emoji)</label>
+                    <input type="text" id="newAgentAvatar" class="form-control" placeholder="e.g., 🤖" maxlength="2">
+                </div>
+                
+                <div class="form-group">
+                    <label>Capabilities</label>
+                    <div id="capabilitiesSection" class="capabilities-section">
+                        <!-- Capabilities will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addAgentModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createAgent()">Create Agent</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Credential Modal -->
+    <div id="addCredentialModal" class="modal">
+        <div class="modal-content credential-modal">
+            <div class="credential-modal-header">
+                <h3>Add New Credential</h3>
+                <button class="close-btn" onclick="closeModal('addCredentialModal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="credential-modal-body">
+                <div class="credential-type-selector">
+                    <h4>Select Credential Type</h4>
+                    <div class="credential-search-box">
+                        <input type="text" id="credentialTypeSearch" placeholder="Search credential types..." class="form-input" onkeyup="filterCredentialTypes()">
+                    </div>
+                    <div id="credentialTypesContainer">
+                        <!-- Credential types will be loaded dynamically by category -->
+                        <div class="loading-spinner">Loading credential types...</div>
+                    </div>
+                </div>
+                
+                <div class="credential-form" id="credentialForm" style="display: none;">
+                    <div class="form-group">
+                        <label>Credential Name</label>
+                        <input type="text" id="credentialName" placeholder="e.g., jira-prod, slack-dev" class="form-input">
+                        <small class="form-hint">Give it a memorable name to reference it later</small>
+                    </div>
+                    
+                    <div id="credentialFields">
+                        <!-- Dynamic fields will be loaded here based on type -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="credential-modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addCredentialModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCredential()" id="saveCredentialBtn" disabled>
+                    <span id="saveCredentialBtnText">Save Credential</span>
+                    <div class="spinner" id="saveCredentialSpinner" style="display: none;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Agent Modal -->
+    <div id="editAgentModal" class="modal">
+        <div class="modal-content liquid-glass" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Edit Agent</h3>
+                <button class="close-btn" onclick="closeModal('editAgentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editAgentId">
+                
+                <div class="form-group">
+                    <label>Agent Name</label>
+                    <input type="text" id="editAgentName" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="editAgentDescription" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Avatar (Emoji)</label>
+                    <input type="text" id="editAgentAvatar" class="form-control" maxlength="2">
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editAgentStatus" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Capabilities</label>
+                    <div id="editCapabilitiesSection" class="capabilities-section">
+                        <!-- Capabilities will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="deleteAgent()" style="margin-right: auto;">Delete Agent</button>
+                <button class="btn btn-secondary" onclick="closeModal('editAgentModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateAgent()">Save Changes</button>
             </div>
         </div>
     </div>
