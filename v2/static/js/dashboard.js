@@ -1839,11 +1839,14 @@ async function loadJobs() {
                     <td>
                         <div class="job-name">
                             <strong>${job.name}</strong>
+                            ${job.job_type ? `<span class="job-type-badge ${job.job_type}">${job.job_type === 'modernization' ? '⚡ Modernization' : '📦 Migration'}</span>` : ''}
                             ${job.description ? `<br><small>${job.description}</small>` : ''}
                         </div>
                     </td>
                     <td>${job.source_name || 'N/A'}</td>
-                    <td>${job.target_name || 'N/A'}</td>
+                    <td>${job.job_type === 'modernization' ? 
+                        (job.modernization_options ? `${job.modernization_options.length} options` : 'Modernization') : 
+                        (job.target_name || 'N/A')}</td>
                     <td>
                         <span class="status-badge ${statusClass}">${job.status}</span>
                     </td>
@@ -1912,20 +1915,79 @@ async function showNewJobModal() {
         document.getElementById('targetSelectionBtn').removeAttribute('data-target-id');
         document.getElementById('targetSelectionBtn').removeAttribute('data-target-name');
         
+        // Reset job type selection
+        document.querySelectorAll('.job-type-card').forEach(card => card.classList.remove('selected'));
+        window.selectedJobType = null;
+        
+        // Hide target selection initially
+        document.getElementById('targetSelectionGroup').style.display = 'none';
+        
     } catch (error) {
         console.error('Error showing inline job form:', error);
         showNotification('Failed to load job creation form', 'error');
     }
 }
 
+// Select Job Type
+function selectJobType(type) {
+    // Update selected state
+    document.querySelectorAll('.job-type-card').forEach(card => card.classList.remove('selected'));
+    document.getElementById(`jobType${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('selected');
+    
+    // Store selected job type
+    window.selectedJobType = type;
+    
+    // Show target selection group
+    document.getElementById('targetSelectionGroup').style.display = 'block';
+    
+    // Update label and button based on job type
+    const targetLabel = document.getElementById('targetLabel');
+    const targetBtn = document.getElementById('targetSelectionBtn');
+    const targetText = document.getElementById('targetSelectionText');
+    
+    if (type === 'modernization') {
+        targetLabel.textContent = 'Modernization Options';
+        targetBtn.setAttribute('onclick', 'showModernizationOptions()');
+        targetText.textContent = 'Choose options...';
+        
+        // Reset any previous target selection
+        targetBtn.classList.remove('selected');
+        targetBtn.removeAttribute('data-target-id');
+        targetBtn.removeAttribute('data-target-name');
+        targetBtn.removeAttribute('data-modernization-options');
+    } else {
+        targetLabel.textContent = 'Target';
+        targetBtn.setAttribute('onclick', 'showTargetSelection()');
+        targetText.textContent = 'Choose target...';
+    }
+}
+
 
 // Save Inline Job
 async function saveInlineJob() {
+    console.log('=== saveInlineJob called ===');
+    console.log('Selected job type:', window.selectedJobType);
+    
     const nameInput = document.getElementById('inlineJobName');
     const sourceBtn = document.getElementById('sourceSelectionBtn');
     const targetBtn = document.getElementById('targetSelectionBtn');
+    const projectManagementCheckbox = document.getElementById('projectManagementEnabled');
+    
+    if (!projectManagementCheckbox) {
+        console.error('Project management checkbox not found!');
+        showNotification('UI Error: Checkbox not found', 'error');
+        return;
+    }
+    
+    const projectManagementEnabled = projectManagementCheckbox.checked;
+    console.log('Project Management enabled:', projectManagementEnabled);
     
     // Validate required fields
+    if (!window.selectedJobType) {
+        showNotification('Please select a job type', 'error');
+        return;
+    }
+    
     if (!nameInput.value.trim()) {
         showNotification('Job name is required', 'error');
         nameInput.focus();
@@ -1937,9 +1999,17 @@ async function saveInlineJob() {
         return;
     }
     
-    if (!targetBtn.dataset.targetId) {
-        showNotification('Please select a target platform', 'error');
-        return;
+    // Validate based on job type
+    if (window.selectedJobType === 'migration') {
+        if (!targetBtn.dataset.targetId) {
+            showNotification('Please select a target platform', 'error');
+            return;
+        }
+    } else if (window.selectedJobType === 'modernization') {
+        if (!targetBtn.dataset.modernizationOptions) {
+            showNotification('Please select modernization options', 'error');
+            return;
+        }
     }
     
     // Show loading state
@@ -1954,14 +2024,38 @@ async function saveInlineJob() {
         
         if (window.isEditMode && window.editJobId) {
             // Update existing job
-            const jobData = {
-                name: nameInput.value.trim(),
-                description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
-                source_id: sourceBtn.dataset.sourceId,
-                source_name: sourceBtn.dataset.sourceName,
-                target_id: targetBtn.dataset.targetId,
-                target_name: targetBtn.dataset.targetName
-            };
+            let jobData;
+            
+            if (window.selectedJobType === 'migration') {
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
+                    job_type: 'migration',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    target_id: targetBtn.dataset.targetId,
+                    target_name: targetBtn.dataset.targetName,
+                    config: {
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled
+                };
+            } else {
+                const modernizationOptions = JSON.parse(targetBtn.dataset.modernizationOptions || '[]');
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} modernization`,
+                    job_type: 'modernization',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    modernization_options: modernizationOptions,
+                    config: {
+                        modernization_options: modernizationOptions,
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled
+                };
+            }
             
             response = await fetch(`/api/jobs/${window.editJobId}`, {
                 method: 'PUT',
@@ -1974,18 +2068,43 @@ async function saveInlineJob() {
             result = await response.json();
         } else {
             // Create new job
-            const jobData = {
-                name: nameInput.value.trim(),
-                description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
-                source_id: sourceBtn.dataset.sourceId,
-                source_name: sourceBtn.dataset.sourceName,
-                target_id: targetBtn.dataset.targetId,
-                target_name: targetBtn.dataset.targetName,
-                config: {
-                    priority: 'medium'
-                },
-                created_by: 'system'
-            };
+            let jobData;
+            
+            if (window.selectedJobType === 'migration') {
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
+                    job_type: 'migration',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    target_id: targetBtn.dataset.targetId,
+                    target_name: targetBtn.dataset.targetName,
+                    config: {
+                        priority: 'medium',
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled,
+                    created_by: 'system'
+                };
+            } else {
+                // Modernization job
+                const modernizationOptions = JSON.parse(targetBtn.dataset.modernizationOptions || '[]');
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} modernization`,
+                    job_type: 'modernization',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    modernization_options: modernizationOptions,
+                    config: {
+                        priority: 'medium',
+                        modernization_options: modernizationOptions,
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled,
+                    created_by: 'system'
+                };
+            }
             
             response = await fetch('/api/jobs', {
                 method: 'POST',
@@ -2020,7 +2139,9 @@ async function saveInlineJob() {
         }
     } catch (error) {
         console.error('Error saving job:', error);
-        showNotification('Failed to save job', 'error');
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+        showNotification(`Failed to save job: ${error.message}`, 'error');
     } finally {
         // Reset button state
         btn.style.display = 'inline';
@@ -2143,8 +2264,111 @@ function selectTarget(id, name) {
 
 // Close selection modal
 function closeSelectionModal(type) {
-    const modal = document.getElementById(`${type}SelectionModal`);
-    modal.classList.remove('show');
+    let modalId;
+    if (type === 'modernizationOptions') {
+        modalId = 'modernizationOptionsModal';
+    } else {
+        modalId = `${type}SelectionModal`;
+    }
+    
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+// Show modernization options modal
+async function showModernizationOptions() {
+    const modal = document.getElementById('modernizationOptionsModal');
+    
+    // Reset selections
+    window.selectedModernizationOptions = [];
+    document.querySelectorAll('.modernization-option').forEach(card => {
+        card.classList.remove('selected');
+    });
+    updateModernizationCount();
+    
+    modal.classList.add('show');
+}
+
+// Toggle modernization option
+function toggleModernizationOption(option) {
+    const card = document.querySelector(`.modernization-option[data-option="${option}"]`);
+    
+    if (!window.selectedModernizationOptions) {
+        window.selectedModernizationOptions = [];
+    }
+    
+    if (card.classList.contains('selected')) {
+        card.classList.remove('selected');
+        window.selectedModernizationOptions = window.selectedModernizationOptions.filter(opt => opt !== option);
+    } else {
+        card.classList.add('selected');
+        window.selectedModernizationOptions.push(option);
+    }
+    
+    updateModernizationCount();
+}
+
+// Update modernization options count
+function updateModernizationCount() {
+    const count = window.selectedModernizationOptions?.length || 0;
+    const countElement = document.getElementById('modernizationOptionsCount');
+    
+    if (count > 0) {
+        countElement.textContent = `(${count})`;
+        countElement.style.display = 'inline';
+    } else {
+        countElement.style.display = 'none';
+    }
+}
+
+// Confirm modernization options
+function confirmModernizationOptions() {
+    console.log('Confirming modernization options:', window.selectedModernizationOptions);
+    
+    if (!window.selectedModernizationOptions || window.selectedModernizationOptions.length === 0) {
+        showNotification('Please select at least one modernization option', 'warning');
+        return;
+    }
+    
+    // Update button to show selected options
+    const btn = document.getElementById('targetSelectionBtn');
+    const text = document.getElementById('targetSelectionText');
+    
+    console.log('Button found:', btn, 'Text element found:', text);
+    
+    if (btn && text) {
+        btn.classList.add('selected');
+        
+        // Create readable text from selected options
+        const optionNames = window.selectedModernizationOptions.map(opt => {
+            const optionMap = {
+                'cicd': 'CI/CD',
+                'cloud': 'Cloud Migration',
+                'containers': 'Containerization',
+                'devops': 'DevOps',
+                'microservices': 'Microservices',
+                'api': 'API Enablement',
+                'observability': 'Observability',
+                'security': 'Security',
+                'data': 'Data Modernization',
+                'performance': 'Performance'
+            };
+            return optionMap[opt] || opt;
+        });
+        
+        text.textContent = optionNames.length > 2 
+            ? `${optionNames.slice(0, 2).join(', ')} + ${optionNames.length - 2} more`
+            : optionNames.join(', ');
+        
+        // Store the selected options
+        btn.dataset.modernizationOptions = JSON.stringify(window.selectedModernizationOptions);
+        
+        console.log('Updated button with options:', btn.dataset.modernizationOptions);
+    }
+    
+    closeSelectionModal('modernizationOptions');
 }
 
 // Load Create Job Page
@@ -2625,9 +2849,38 @@ async function showInlineJobDetail(jobId) {
         
         // Populate timeline details
         document.getElementById('inlineJobDetailName').textContent = job.name;
-        document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your migration progress step by step';
+        
+        // Update description based on job type
+        if (job.job_type === 'modernization') {
+            document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your modernization progress step by step';
+        } else {
+            document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your migration progress step by step';
+        }
+        
         document.getElementById('inlineJobDetailSource').textContent = job.source_name || 'N/A';
-        document.getElementById('inlineJobDetailTarget').textContent = job.target_name || 'N/A';
+        
+        // Handle target/modernization options display
+        if (job.job_type === 'modernization' && job.modernization_options) {
+            const optionNames = job.modernization_options.map(opt => {
+                const optionMap = {
+                    'cicd': 'CI/CD',
+                    'cloud': 'Cloud Migration',
+                    'containers': 'Containerization',
+                    'devops': 'DevOps',
+                    'microservices': 'Microservices',
+                    'api': 'API Enablement',
+                    'observability': 'Observability',
+                    'security': 'Security',
+                    'data': 'Data Modernization',
+                    'performance': 'Performance'
+                };
+                return optionMap[opt] || opt;
+            });
+            document.getElementById('inlineJobDetailTarget').textContent = optionNames.join(', ');
+        } else {
+            document.getElementById('inlineJobDetailTarget').textContent = job.target_name || 'N/A';
+        }
+        
         document.getElementById('inlineJobDetailCreated').textContent = new Date(job.created_at).toLocaleDateString();
         
         // Show linked credentials if any
@@ -2715,7 +2968,7 @@ function renderJobStages(stages, currentStage) {
                 
                 <div class="timeline-agents">
                     ${stage.agents.map(agent => `
-                        <div class="timeline-agent">
+                        <div class="timeline-agent agent-${agent.toLowerCase().replace(/\s+/g, '-')}">
                             <svg class="agent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                 <circle cx="12" cy="7" r="4"></circle>
@@ -2773,7 +3026,7 @@ function renderInlineJobStages(stages, currentStage) {
                 
                 <div class="timeline-agents">
                     ${stage.agents.map(agent => `
-                        <div class="timeline-agent">
+                        <div class="timeline-agent agent-${agent.toLowerCase().replace(/\s+/g, '-')}">
                             <svg class="agent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                 <circle cx="12" cy="7" r="4"></circle>
