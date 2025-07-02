@@ -26,6 +26,7 @@ class ExecutionService:
         self.data_dir = Path(__file__).parent.parent / 'data'
         self.executions = {}
         self.execution_logs = []
+        self.task_logs = {}  # Store logs by task key
         
         # Initialize Claude authentication
         try:
@@ -101,13 +102,26 @@ class ExecutionService:
                 for pf in prompt_files
             ]
         
+        # Clear previous logs for this task
+        task_key = f"{job_id}_{stage_id}_{task_index}"
+        self.task_logs[task_key] = []
+        
+        # Add initial log
+        self.add_task_log(job_id, stage_id, task_index, 'info', f'Starting execution of {task.get("name", "task")}')
+        self.add_task_log(job_id, stage_id, task_index, 'info', f'Agent: {agent_name}, Capability: {capability}')
+        
         # Execute each prompt in the orchestrated sequence
         results = []
         overall_status = 'success'
         
         logger.info(f"Executing orchestrated sequence of {len(prompt_sequence)} prompts for {agent_name}/{capability} -> {target_name}")
+        self.add_task_log(job_id, stage_id, task_index, 'info', f'Found {len(prompt_sequence)} prompts to execute')
         
-        for prompt_info in prompt_sequence:
+        for i, prompt_info in enumerate(prompt_sequence):
+            # Log prompt execution
+            self.add_task_log(job_id, stage_id, task_index, 'info', 
+                             f'Executing prompt {i+1}/{len(prompt_sequence)}: {prompt_info.get("file", "prompt")}')
+            
             # Add prompt metadata to context
             enhanced_context = {
                 **job_context,
@@ -120,12 +134,18 @@ class ExecutionService:
             else:
                 enhanced_context['agent_prompt'] = prompt_info['file']
             
-            result = self._execute_prompt(prompt_info['path'], enhanced_context, task, prompt_info)
+            result = self._execute_prompt(prompt_info['path'], enhanced_context, task, prompt_info, 
+                                        job_id, stage_id, task_index)
             results.append(result)
             
             if result['status'] == 'error':
                 overall_status = 'error'
+                self.add_task_log(job_id, stage_id, task_index, 'error', 
+                                 f'Prompt execution failed: {result.get("error", "Unknown error")}')
                 break  # Stop on first error
+            else:
+                self.add_task_log(job_id, stage_id, task_index, 'info', 
+                                 f'Prompt {i+1} completed successfully')
                 
         execution_result = {
             'execution_id': execution_id,
@@ -140,16 +160,26 @@ class ExecutionService:
         }
         
         # Save outputs to file system
-        output_paths = self._save_execution_outputs(job_id, stage_id, task_index, task, results)
+        output_paths = self._save_execution_outputs(job_id, stage_id, task_index, task, results, job_context)
         execution_result['output_paths'] = output_paths
         
         # Store execution history
         self.executions[execution_id] = execution_result
         self.execution_logs.append(execution_result)
         
+        # Final log
+        if overall_status == 'success':
+            self.add_task_log(job_id, stage_id, task_index, 'info', 
+                             f'Task completed successfully! Executed {len(results)} prompts.')
+        else:
+            self.add_task_log(job_id, stage_id, task_index, 'error', 
+                             f'Task failed. Check errors above.')
+        
         return execution_result
     
-    def _execute_prompt(self, prompt_file: Path, context: Dict[str, Any], task: Dict[str, Any], prompt_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _execute_prompt(self, prompt_file: Path, context: Dict[str, Any], task: Dict[str, Any], 
+                       prompt_info: Optional[Dict[str, Any]] = None, job_id: str = None, 
+                       stage_id: str = None, task_index: int = None) -> Dict[str, Any]:
         """
         Execute a single prompt file using Claude
         
@@ -202,7 +232,7 @@ Working Directory: {context.get('working_directory', os.getcwd())}
 """
             
             # Prepare the command to execute with Claude
-            result = self._execute_with_claude(full_prompt, context)
+            result = self._execute_with_claude(full_prompt, context, job_id, stage_id, task_index)
             
             return {
                 'prompt_file': str(prompt_file.name),
@@ -236,7 +266,8 @@ Working Directory: {context.get('working_directory', os.getcwd())}
         
         return content
     
-    def _execute_with_claude(self, prompt: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_with_claude(self, prompt: str, context: Dict[str, Any], job_id: str = None, 
+                           stage_id: str = None, task_index: int = None) -> Dict[str, Any]:
         """
         Execute the prompt using Claude via command line
         """
@@ -254,6 +285,10 @@ Working Directory: {context.get('working_directory', os.getcwd())}
             
             # Set working directory - use job's working directory if available
             working_dir = context.get('working_directory', os.getcwd())
+            
+            if job_id and stage_id is not None and task_index is not None:
+                self.add_task_log(job_id, stage_id, task_index, 'info', f'Working directory: {working_dir}')
+                self.add_task_log(job_id, stage_id, task_index, 'info', 'Starting Claude execution...')
             
             # Create message queue for output
             message_queue = queue.Queue()
@@ -277,11 +312,17 @@ Working Directory: {context.get('working_directory', os.getcwd())}
                                         if text:
                                             output_lines.append(text)
                                             message_queue.put({'type': 'message', 'content': text})
+                                            if job_id and stage_id is not None and task_index is not None:
+                                                # Log first 200 chars of assistant messages
+                                                preview = text[:200] + "..." if len(text) > 200 else text
+                                                self.add_task_log(job_id, stage_id, task_index, 'info', f'Claude: {preview}')
                             
                             # Handle tool use
                             elif message.get("type") == "tool_use":
                                 tool_name = message.get('name', 'unknown')
                                 message_queue.put({'type': 'tool', 'content': f'Using tool: {tool_name}'})
+                                if job_id and stage_id is not None and task_index is not None:
+                                    self.add_task_log(job_id, stage_id, task_index, 'debug', f'Tool use: {tool_name}')
                             
                             # Handle results
                             elif message.get("type") == "result":
@@ -386,15 +427,20 @@ Working Directory: {context.get('working_directory', os.getcwd())}
         return self.executions.get(execution_id)
     
     def _save_execution_outputs(self, job_id: str, stage_id: str, task_index: int, 
-                               task: Dict[str, Any], results: List[Dict[str, Any]]) -> Dict[str, List[str]]:
+                               task: Dict[str, Any], results: List[Dict[str, Any]], job_context: Dict[str, Any] = None) -> Dict[str, List[str]]:
         """
         Save execution outputs to the file system
         
-        Structure: data/jobs/{job_id}/outputs/{stage_id}/{task_index}_{task_name}/
+        Uses task output folder if provided in context, otherwise falls back to old structure
         """
-        # Clean task name for folder
-        task_name = task.get('name', 'unknown').lower().replace(' ', '_')
-        output_dir = self.data_dir / 'jobs' / job_id / 'outputs' / stage_id / f"{task_index}_{task_name}"
+        # Use task output folder if provided in context
+        if job_context and 'task_output_folder' in job_context:
+            output_dir = Path(job_context['task_output_folder'])
+        else:
+            # Fallback to old structure: data/jobs/{job_id}/outputs/{stage_id}/{task_index}_{task_name}/
+            task_name = task.get('name', 'unknown').lower().replace(' ', '_')
+            output_dir = self.data_dir / 'jobs' / job_id / 'outputs' / stage_id / f"{task_index}_{task_name}"
+        
         output_dir.mkdir(parents=True, exist_ok=True)
         
         output_paths = {
@@ -490,6 +536,34 @@ Working Directory: {context.get('working_directory', os.getcwd())}
                         }
         
         return None
+    
+    def get_task_logs(self, job_id: str, stage_id: str, task_index: int) -> List[Dict[str, Any]]:
+        """
+        Get logs for a specific task
+        """
+        task_key = f"{job_id}_{stage_id}_{task_index}"
+        return self.task_logs.get(task_key, [])
+    
+    def add_task_log(self, job_id: str, stage_id: str, task_index: int, level: str, message: str):
+        """
+        Add a log entry for a task
+        """
+        task_key = f"{job_id}_{stage_id}_{task_index}"
+        
+        if task_key not in self.task_logs:
+            self.task_logs[task_key] = []
+        
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'level': level,
+            'message': message
+        }
+        
+        self.task_logs[task_key].append(log_entry)
+        
+        # Keep only last 1000 logs per task
+        if len(self.task_logs[task_key]) > 1000:
+            self.task_logs[task_key] = self.task_logs[task_key][-1000:]
 
 # Global instance
 execution_service = ExecutionService()
