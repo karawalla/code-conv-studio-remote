@@ -45,17 +45,24 @@ This document maps out the UI structure, identifying which files are used for ea
 - **HTML Section**: `<div id="jobsPage" class="page">`
 - **Sub-sections**:
   - `<div id="jobsTableContainer">` - Jobs list
-  - `<div id="inlineCreateJob">` - Inline job creation form
+  - `<div id="inlineCreateJob">` - Inline job creation form (now with job type selection)
   - `<div id="inlineJobDetail">` - Job detail view with stages
 - **Key Functions**:
-  - `loadJobs()` - Loads jobs list
-  - `showInlineCreateJob()` - Shows inline create form
-  - `createInlineJob()` - Creates job from inline form
+  - `loadJobs()` - Loads jobs list (now shows job type badges)
+  - `showNewJobModal()` - Shows inline create form
+  - `selectJobType(type)` - Handles job type selection (migration/modernization)
+  - `saveInlineJob()` - Creates job from inline form (handles both types)
   - `showInlineJobDetail(jobId)` - Shows job detail with stages
   - `editJob(jobId)` - Navigates to edit job (uses create job page)
   - `deleteJob(jobId, jobName)` - Deletes a job
   - `executeJob(jobId)` - Executes a job
   - `refreshJobStatus(jobId)` - Refreshes job status
+- **Modernization Functions**:
+  - `showModernizationOptions()` - Opens modernization options modal
+  - `toggleModernizationOption(option)` - Toggles modernization option selection
+  - `confirmModernizationOptions()` - Confirms selected modernization options
+- **Modals**:
+  - `<div id="modernizationOptionsModal" class="selection-modal">` - Modernization options selector
 
 ### 5. Create/Edit Job Screen
 - **HTML Section**: `<div id="createJobPage" class="page">`
@@ -181,3 +188,74 @@ onclick="deleteAgent()"
 3. Create load function in `dashboard.js`
 4. Add case in `loadPageData()` function
 5. Style in appropriate CSS file
+
+## New Features: Modernization Support
+
+### Job Type Selection
+- Jobs now support two types: Migration and Modernization
+- Job type selection is required when creating a new job
+- Visual job type badges appear in the jobs list
+
+### Modernization Options
+When "Modernization" is selected:
+- Target selection is replaced with "Modernization Options"
+- Multiple options can be selected from categories:
+  - Infrastructure & Deployment: CI/CD, Cloud Migration, Containerization, DevOps
+  - Architecture & Code: Microservices, API Enablement
+  - Operations & Quality: Observability, Security, Data Modernization, Performance
+
+### CSS Classes
+- `.job-type-card` - Job type selection cards
+- `.job-type-badge` - Type indicators in job list
+- `.modernization-option` - Modernization option cards
+- `.modernization-category` - Category containers
+- `.project-management-toggle` - Project management checkbox container
+
+## Project Management Toggle
+
+### Feature Description
+- Jobs can optionally include project management stages (Jira, Sprint Planning, etc.)
+- A checkbox in the job creation form controls this option
+- When enabled, adds PM-specific stages and tasks to the workflow
+- When disabled, creates a streamlined technical-only workflow
+
+### Implementation
+- **Frontend**: Checkbox with ID `#projectManagementEnabled` in inline create form
+- **Backend**: `project_management_enabled` parameter passed to job creation
+- **Stage Generation**: Conditional stages based on the toggle:
+  - With PM: Project Setup, Sprint Planning, Sprint Review stages included
+  - Without PM: Only core technical stages included
+- **Task Differences**: Some tasks are modified based on PM setting
+  - With PM: "Update Jira with Findings"
+  - Without PM: "Document Findings"
+
+## Knowledge Store
+
+### 8. Knowledge Store Screen
+- **HTML Section**: `<div id="knowledgePage" class="page">`
+- **Navigation**: Left sidebar has "Knowledge Store" tab
+- **Key Functions**:
+  - `loadKnowledgeTopics()` - Loads knowledge topics with mockup data
+  - `toggleKnowledge(stageId, taskIndex, enabled)` - Toggles knowledge context for tasks
+  - `applyKnowledge(stageId, taskIndex)` - Deprecated function (replaced by toggle)
+- **Features**:
+  - Statistics dashboard showing topics count, reading hours, resources, and active research
+  - Topics table with categories, completion scores, resources info, and status
+  - Diverse topics covering Java, C#, Rust, AI patterns, cloud migrations, etc.
+
+### Task Toolbar & Knowledge Toggle
+- **Location**: Each task in job stages timeline
+- **HTML Structure**: `.task-toolbar` container with Execute button and Knowledge toggle
+- **Key Functions**:
+  - `executeTask(stageId, taskIndex)` - Executes individual task
+  - `toggleKnowledge(stageId, taskIndex, enabled)` - Enables/disables knowledge context
+- **CSS Classes**:
+  - `.task-toolbar` - Container for task actions
+  - `.toolbar-btn` - Button styling
+  - `.knowledge-toggle` - Toggle switch container
+  - `.toggle-slider` - Visual toggle switch element
+- **Features**:
+  - Execute button with blue theme and play icon
+  - Knowledge Store toggle with purple theme when enabled
+  - Larger icons (20px) for better visibility
+  - Toggle state tracked in `window.knowledgeEnabledTasks`

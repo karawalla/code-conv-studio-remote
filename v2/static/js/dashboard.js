@@ -95,7 +95,8 @@ function updatePageHeader(pageName) {
         'jobs': 'Jobs',
         'createJob': 'Create Job',
         'settings': 'Settings',
-        'agents': 'Agents'
+        'agents': 'Agents',
+        'knowledge': 'Knowledge Store'
     };
     
     // Commented out - redundant page titles removed
@@ -189,6 +190,9 @@ async function loadPageData(pageName) {
         case 'settings':
             // Load credentials by default when opening settings
             await loadCredentials();
+            break;
+        case 'knowledge':
+            await loadKnowledgeTopics();
             break;
     }
 }
@@ -1839,11 +1843,14 @@ async function loadJobs() {
                     <td>
                         <div class="job-name">
                             <strong>${job.name}</strong>
+                            ${job.job_type ? `<span class="job-type-badge ${job.job_type}">${job.job_type === 'modernization' ? '⚡ Modernization' : '📦 Migration'}</span>` : ''}
                             ${job.description ? `<br><small>${job.description}</small>` : ''}
                         </div>
                     </td>
                     <td>${job.source_name || 'N/A'}</td>
-                    <td>${job.target_name || 'N/A'}</td>
+                    <td>${job.job_type === 'modernization' ? 
+                        (job.modernization_options ? `${job.modernization_options.length} options` : 'Modernization') : 
+                        (job.target_name || 'N/A')}</td>
                     <td>
                         <span class="status-badge ${statusClass}">${job.status}</span>
                     </td>
@@ -1912,20 +1919,79 @@ async function showNewJobModal() {
         document.getElementById('targetSelectionBtn').removeAttribute('data-target-id');
         document.getElementById('targetSelectionBtn').removeAttribute('data-target-name');
         
+        // Reset job type selection
+        document.querySelectorAll('.job-type-card').forEach(card => card.classList.remove('selected'));
+        window.selectedJobType = null;
+        
+        // Hide target selection initially
+        document.getElementById('targetSelectionGroup').style.display = 'none';
+        
     } catch (error) {
         console.error('Error showing inline job form:', error);
         showNotification('Failed to load job creation form', 'error');
     }
 }
 
+// Select Job Type
+function selectJobType(type) {
+    // Update selected state
+    document.querySelectorAll('.job-type-card').forEach(card => card.classList.remove('selected'));
+    document.getElementById(`jobType${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('selected');
+    
+    // Store selected job type
+    window.selectedJobType = type;
+    
+    // Show target selection group
+    document.getElementById('targetSelectionGroup').style.display = 'block';
+    
+    // Update label and button based on job type
+    const targetLabel = document.getElementById('targetLabel');
+    const targetBtn = document.getElementById('targetSelectionBtn');
+    const targetText = document.getElementById('targetSelectionText');
+    
+    if (type === 'modernization') {
+        targetLabel.textContent = 'Modernization Options';
+        targetBtn.setAttribute('onclick', 'showModernizationOptions()');
+        targetText.textContent = 'Choose options...';
+        
+        // Reset any previous target selection
+        targetBtn.classList.remove('selected');
+        targetBtn.removeAttribute('data-target-id');
+        targetBtn.removeAttribute('data-target-name');
+        targetBtn.removeAttribute('data-modernization-options');
+    } else {
+        targetLabel.textContent = 'Target';
+        targetBtn.setAttribute('onclick', 'showTargetSelection()');
+        targetText.textContent = 'Choose target...';
+    }
+}
+
 
 // Save Inline Job
 async function saveInlineJob() {
+    console.log('=== saveInlineJob called ===');
+    console.log('Selected job type:', window.selectedJobType);
+    
     const nameInput = document.getElementById('inlineJobName');
     const sourceBtn = document.getElementById('sourceSelectionBtn');
     const targetBtn = document.getElementById('targetSelectionBtn');
+    const projectManagementCheckbox = document.getElementById('projectManagementEnabled');
+    
+    if (!projectManagementCheckbox) {
+        console.error('Project management checkbox not found!');
+        showNotification('UI Error: Checkbox not found', 'error');
+        return;
+    }
+    
+    const projectManagementEnabled = projectManagementCheckbox.checked;
+    console.log('Project Management enabled:', projectManagementEnabled);
     
     // Validate required fields
+    if (!window.selectedJobType) {
+        showNotification('Please select a job type', 'error');
+        return;
+    }
+    
     if (!nameInput.value.trim()) {
         showNotification('Job name is required', 'error');
         nameInput.focus();
@@ -1937,9 +2003,17 @@ async function saveInlineJob() {
         return;
     }
     
-    if (!targetBtn.dataset.targetId) {
-        showNotification('Please select a target platform', 'error');
-        return;
+    // Validate based on job type
+    if (window.selectedJobType === 'migration') {
+        if (!targetBtn.dataset.targetId) {
+            showNotification('Please select a target platform', 'error');
+            return;
+        }
+    } else if (window.selectedJobType === 'modernization') {
+        if (!targetBtn.dataset.modernizationOptions) {
+            showNotification('Please select modernization options', 'error');
+            return;
+        }
     }
     
     // Show loading state
@@ -1954,14 +2028,38 @@ async function saveInlineJob() {
         
         if (window.isEditMode && window.editJobId) {
             // Update existing job
-            const jobData = {
-                name: nameInput.value.trim(),
-                description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
-                source_id: sourceBtn.dataset.sourceId,
-                source_name: sourceBtn.dataset.sourceName,
-                target_id: targetBtn.dataset.targetId,
-                target_name: targetBtn.dataset.targetName
-            };
+            let jobData;
+            
+            if (window.selectedJobType === 'migration') {
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
+                    job_type: 'migration',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    target_id: targetBtn.dataset.targetId,
+                    target_name: targetBtn.dataset.targetName,
+                    config: {
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled
+                };
+            } else {
+                const modernizationOptions = JSON.parse(targetBtn.dataset.modernizationOptions || '[]');
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} modernization`,
+                    job_type: 'modernization',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    modernization_options: modernizationOptions,
+                    config: {
+                        modernization_options: modernizationOptions,
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled
+                };
+            }
             
             response = await fetch(`/api/jobs/${window.editJobId}`, {
                 method: 'PUT',
@@ -1974,18 +2072,43 @@ async function saveInlineJob() {
             result = await response.json();
         } else {
             // Create new job
-            const jobData = {
-                name: nameInput.value.trim(),
-                description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
-                source_id: sourceBtn.dataset.sourceId,
-                source_name: sourceBtn.dataset.sourceName,
-                target_id: targetBtn.dataset.targetId,
-                target_name: targetBtn.dataset.targetName,
-                config: {
-                    priority: 'medium'
-                },
-                created_by: 'system'
-            };
+            let jobData;
+            
+            if (window.selectedJobType === 'migration') {
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} to ${targetBtn.dataset.targetName} migration`,
+                    job_type: 'migration',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    target_id: targetBtn.dataset.targetId,
+                    target_name: targetBtn.dataset.targetName,
+                    config: {
+                        priority: 'medium',
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled,
+                    created_by: 'system'
+                };
+            } else {
+                // Modernization job
+                const modernizationOptions = JSON.parse(targetBtn.dataset.modernizationOptions || '[]');
+                jobData = {
+                    name: nameInput.value.trim(),
+                    description: `${sourceBtn.dataset.sourceName} modernization`,
+                    job_type: 'modernization',
+                    source_id: sourceBtn.dataset.sourceId,
+                    source_name: sourceBtn.dataset.sourceName,
+                    modernization_options: modernizationOptions,
+                    config: {
+                        priority: 'medium',
+                        modernization_options: modernizationOptions,
+                        project_management_enabled: projectManagementEnabled
+                    },
+                    project_management_enabled: projectManagementEnabled,
+                    created_by: 'system'
+                };
+            }
             
             response = await fetch('/api/jobs', {
                 method: 'POST',
@@ -2020,7 +2143,9 @@ async function saveInlineJob() {
         }
     } catch (error) {
         console.error('Error saving job:', error);
-        showNotification('Failed to save job', 'error');
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+        showNotification(`Failed to save job: ${error.message}`, 'error');
     } finally {
         // Reset button state
         btn.style.display = 'inline';
@@ -2143,8 +2268,111 @@ function selectTarget(id, name) {
 
 // Close selection modal
 function closeSelectionModal(type) {
-    const modal = document.getElementById(`${type}SelectionModal`);
-    modal.classList.remove('show');
+    let modalId;
+    if (type === 'modernizationOptions') {
+        modalId = 'modernizationOptionsModal';
+    } else {
+        modalId = `${type}SelectionModal`;
+    }
+    
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+// Show modernization options modal
+async function showModernizationOptions() {
+    const modal = document.getElementById('modernizationOptionsModal');
+    
+    // Reset selections
+    window.selectedModernizationOptions = [];
+    document.querySelectorAll('.modernization-option').forEach(card => {
+        card.classList.remove('selected');
+    });
+    updateModernizationCount();
+    
+    modal.classList.add('show');
+}
+
+// Toggle modernization option
+function toggleModernizationOption(option) {
+    const card = document.querySelector(`.modernization-option[data-option="${option}"]`);
+    
+    if (!window.selectedModernizationOptions) {
+        window.selectedModernizationOptions = [];
+    }
+    
+    if (card.classList.contains('selected')) {
+        card.classList.remove('selected');
+        window.selectedModernizationOptions = window.selectedModernizationOptions.filter(opt => opt !== option);
+    } else {
+        card.classList.add('selected');
+        window.selectedModernizationOptions.push(option);
+    }
+    
+    updateModernizationCount();
+}
+
+// Update modernization options count
+function updateModernizationCount() {
+    const count = window.selectedModernizationOptions?.length || 0;
+    const countElement = document.getElementById('modernizationOptionsCount');
+    
+    if (count > 0) {
+        countElement.textContent = `(${count})`;
+        countElement.style.display = 'inline';
+    } else {
+        countElement.style.display = 'none';
+    }
+}
+
+// Confirm modernization options
+function confirmModernizationOptions() {
+    console.log('Confirming modernization options:', window.selectedModernizationOptions);
+    
+    if (!window.selectedModernizationOptions || window.selectedModernizationOptions.length === 0) {
+        showNotification('Please select at least one modernization option', 'warning');
+        return;
+    }
+    
+    // Update button to show selected options
+    const btn = document.getElementById('targetSelectionBtn');
+    const text = document.getElementById('targetSelectionText');
+    
+    console.log('Button found:', btn, 'Text element found:', text);
+    
+    if (btn && text) {
+        btn.classList.add('selected');
+        
+        // Create readable text from selected options
+        const optionNames = window.selectedModernizationOptions.map(opt => {
+            const optionMap = {
+                'cicd': 'CI/CD',
+                'cloud': 'Cloud Migration',
+                'containers': 'Containerization',
+                'devops': 'DevOps',
+                'microservices': 'Microservices',
+                'api': 'API Enablement',
+                'observability': 'Observability',
+                'security': 'Security',
+                'data': 'Data Modernization',
+                'performance': 'Performance'
+            };
+            return optionMap[opt] || opt;
+        });
+        
+        text.textContent = optionNames.length > 2 
+            ? `${optionNames.slice(0, 2).join(', ')} + ${optionNames.length - 2} more`
+            : optionNames.join(', ');
+        
+        // Store the selected options
+        btn.dataset.modernizationOptions = JSON.stringify(window.selectedModernizationOptions);
+        
+        console.log('Updated button with options:', btn.dataset.modernizationOptions);
+    }
+    
+    closeSelectionModal('modernizationOptions');
 }
 
 // Load Create Job Page
@@ -2625,9 +2853,38 @@ async function showInlineJobDetail(jobId) {
         
         // Populate timeline details
         document.getElementById('inlineJobDetailName').textContent = job.name;
-        document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your migration progress step by step';
+        
+        // Update description based on job type
+        if (job.job_type === 'modernization') {
+            document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your modernization progress step by step';
+        } else {
+            document.getElementById('inlineJobDetailDescription').textContent = job.description || 'Track your migration progress step by step';
+        }
+        
         document.getElementById('inlineJobDetailSource').textContent = job.source_name || 'N/A';
-        document.getElementById('inlineJobDetailTarget').textContent = job.target_name || 'N/A';
+        
+        // Handle target/modernization options display
+        if (job.job_type === 'modernization' && job.modernization_options) {
+            const optionNames = job.modernization_options.map(opt => {
+                const optionMap = {
+                    'cicd': 'CI/CD',
+                    'cloud': 'Cloud Migration',
+                    'containers': 'Containerization',
+                    'devops': 'DevOps',
+                    'microservices': 'Microservices',
+                    'api': 'API Enablement',
+                    'observability': 'Observability',
+                    'security': 'Security',
+                    'data': 'Data Modernization',
+                    'performance': 'Performance'
+                };
+                return optionMap[opt] || opt;
+            });
+            document.getElementById('inlineJobDetailTarget').textContent = optionNames.join(', ');
+        } else {
+            document.getElementById('inlineJobDetailTarget').textContent = job.target_name || 'N/A';
+        }
+        
         document.getElementById('inlineJobDetailCreated').textContent = new Date(job.created_at).toLocaleDateString();
         
         // Show linked credentials if any
@@ -2715,7 +2972,7 @@ function renderJobStages(stages, currentStage) {
                 
                 <div class="timeline-agents">
                     ${stage.agents.map(agent => `
-                        <div class="timeline-agent">
+                        <div class="timeline-agent agent-${agent.toLowerCase().replace(/\s+/g, '-')}">
                             <svg class="agent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                 <circle cx="12" cy="7" r="4"></circle>
@@ -2773,7 +3030,7 @@ function renderInlineJobStages(stages, currentStage) {
                 
                 <div class="timeline-agents">
                     ${stage.agents.map(agent => `
-                        <div class="timeline-agent">
+                        <div class="timeline-agent agent-${agent.toLowerCase().replace(/\s+/g, '-')}">
                             <svg class="agent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                 <circle cx="12" cy="7" r="4"></circle>
@@ -2786,23 +3043,40 @@ function renderInlineJobStages(stages, currentStage) {
                 <div class="timeline-tasks">
                     ${stage.tasks.map((task, taskIndex) => `
                         <div class="timeline-task-container" id="task_${stage.id}_${taskIndex}">
+                            <!-- Task Toolbar -->
+                            ${task.status === 'pending' ? `
+                                <div class="task-toolbar">
+                                    <button class="toolbar-btn execute" onclick="executeTask('${stage.id}', ${taskIndex})" title="Execute Task">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <span>Execute</span>
+                                    </button>
+                                    <div class="knowledge-toggle-wrapper">
+                                        <label class="knowledge-toggle" title="Enable Knowledge Store Context">
+                                            <input type="checkbox" id="knowledge_${stage.id}_${taskIndex}" onchange="toggleKnowledge('${stage.id}', ${taskIndex}, this.checked)">
+                                            <span class="knowledge-toggle-content">
+                                                <svg class="toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                                </svg>
+                                                <span class="toggle-label">Knowledge Store</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
                             <div class="timeline-task" onclick="toggleTaskConfig('${stage.id}', ${taskIndex})">
                                 <div class="task-status-dot ${task.status.replace('_', '-')}"></div>
+                                ${getTaskCapabilityIcon(task.name)}
                                 <span class="task-name">${task.name}</span>
-                                <span class="task-agent">${task.agent}</span>
+                                <span class="task-agent agent-${task.agent.toLowerCase().replace(/\s+/g, '-')}">${task.agent}</span>
                                 <button class="task-config-toggle" onclick="event.stopPropagation(); toggleTaskConfig('${stage.id}', ${taskIndex})" title="Configure">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                     </svg>
                                 </button>
-                                ${task.status === 'pending' ? `
-                                    <button class="task-execute-btn" onclick="event.stopPropagation(); executeTask('${stage.id}', ${taskIndex})" title="Execute">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    </button>
-                                ` : ''}
                                 ${task.status === 'completed' || task.status === 'failed' ? `
                                     <button class="task-output-btn" onclick="event.stopPropagation(); viewTaskOutput('${stage.id}', ${taskIndex})" title="View Output">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2869,6 +3143,70 @@ async function refreshJobDetail() {
     if (jobId) {
         await showJobDetail(jobId);
     }
+}
+
+// Helper function to get task capability icon
+function getTaskCapabilityIcon(taskName) {
+    const capabilityMapping = {
+        // Project Setup
+        'Create Jira Epic': '📋',
+        'Create Initial Tickets': '🎫',
+        'Send Kickoff Email': '📧',
+        'Send Slack Notification': '💬',
+        'Setup Sprint Structure': '🏃',
+        
+        // Code Analysis
+        'Analyze Source Structure': '🔍',
+        'Identify Dependencies': '🔗',
+        'Create Migration Plan': '📊',
+        'Document Architecture': '📐',
+        'Update Jira with Findings': '📝',
+        
+        // Sprint Planning
+        'Create Sprint Backlog': '📚',
+        'Estimate Story Points': '🎯',
+        'Assign Sprint Goals': '🎯',
+        'Update Jira Board': '📋',
+        'Schedule Sprint Ceremonies': '📅',
+        
+        // Code Migration
+        'Setup Target Environment': '🏗️',
+        'Migrate Core Components': '🔄',
+        'Transform Business Logic': '⚙️',
+        'Update Dependencies': '📦',
+        'Daily Standup Updates': '💬',
+        
+        // Validation & Fix
+        'Run Test Suite': '🧪',
+        'Validate Functionality': '✅',
+        'Fix Migration Issues': '🔧',
+        'Update Tests': '🧪',
+        'Document Fixes': '📝',
+        
+        // Post Processing
+        'Create Documentation': '📚',
+        'Update Jira Tickets': '🎫',
+        'Send Progress Report': '📊',
+        'Archive Sprint': '📦',
+        'Notify Stakeholders': '📢',
+        
+        // Deployment
+        'Prepare Deployment': '🚀',
+        'Deploy to Staging': '🌐',
+        'Run Integration Tests': '🧪',
+        'Deploy to Production': '🚀',
+        'Send Deployment Notice': '📢',
+        
+        // Knowledge Transfer
+        'Create Training Materials': '📚',
+        'Schedule Training Sessions': '📅',
+        'Conduct Knowledge Transfer': '🎓',
+        'Document Best Practices': '📝',
+        'Send Completion Report': '✅'
+    };
+    
+    const icon = capabilityMapping[taskName] || '⚡';
+    return `<span class="task-capability-icon">${icon}</span>`;
 }
 
 // Helper function to determine credential type for a specific task
@@ -4288,5 +4626,651 @@ async function executeTask(stageId, taskIndex) {
             `;
         }
     }
+}
+
+// Knowledge Store Helper Functions
+function getCategoryDisplayName(category) {
+    const categoryMap = {
+        'migration-patterns': 'Migration',
+        'framework-analysis': 'Frameworks',
+        'cloud-architecture': 'Cloud',
+        'ai-ml-patterns': 'AI Patterns',
+        'security-practices': 'Security',
+        'performance-optimization': 'Performance',
+        'best-practices': 'Best Practices',
+        'other': 'Other'
+    };
+    return categoryMap[category] || category;
+}
+
+function generateTopicTags(topic) {
+    const tags = [];
+    
+    // Add category-based tags
+    if (topic.category) {
+        tags.push(topic.category.split('-')[0]);
+    }
+    
+    // Add source-based tags
+    if (topic.sources) {
+        if (topic.sources.github) tags.push('github');
+        if (topic.sources.browser) tags.push('web');
+        if (topic.sources.blogs) tags.push('blogs');
+        if (topic.sources.confluence) tags.push('confluence');
+    }
+    
+    return tags;
+}
+
+// Knowledge Store Functions
+async function loadKnowledgeTopics() {
+    try {
+        // Mock data for now
+        const topics = [
+            {
+                id: 'ai-code-migration-patterns',
+                name: 'AI-Driven Code Migration Patterns',
+                description: 'LLM-based migration strategies, prompt engineering for code transformation, chain-of-thought reasoning for complex refactoring',
+                status: 'ready',
+                category: 'AI Patterns',
+                documents: 67,
+                links: 234,
+                reading_hours: 18.5,
+                last_research: '1 hour ago',
+                next_scheduled: 'Tomorrow 2:00 AM',
+                knowledge_score: 92,
+                insights: [
+                    'Multi-agent approach improves migration accuracy by 40%',
+                    'RAG-enhanced prompts reduce hallucination in code generation',
+                    'Tree-of-thought reasoning excels at architectural decisions'
+                ],
+                tags: ['ai', 'llm', 'migration', 'patterns']
+            },
+            {
+                id: 'java-spring-ecosystem',
+                name: 'Java Spring Boot Ecosystem 2024',
+                description: 'Spring Boot 3.x, WebFlux reactive patterns, Spring Cloud microservices, Native compilation with GraalVM',
+                status: 'ready',
+                category: 'Frameworks',
+                documents: 89,
+                links: 342,
+                reading_hours: 24.7,
+                last_research: '3 hours ago',
+                next_scheduled: 'Monday 1:00 AM',
+                knowledge_score: 96,
+                insights: [
+                    'Spring Boot 3 requires Java 17 minimum',
+                    'Virtual threads dramatically improve performance',
+                    'Native images reduce startup time by 95%'
+                ],
+                tags: ['java', 'spring', 'microservices', 'reactive']
+            },
+            {
+                id: 'dotnet-modern-patterns',
+                name: 'C# and .NET 8 Modern Patterns',
+                description: 'Minimal APIs, AOT compilation, MAUI cross-platform, Blazor WebAssembly, Orleans actor model',
+                status: 'researching',
+                category: 'Frameworks',
+                documents: 56,
+                links: 198,
+                reading_hours: 15.3,
+                last_research: '30 minutes ago',
+                next_scheduled: 'In 4 hours',
+                knowledge_score: 82,
+                progress: 72,
+                insights: [
+                    'Minimal APIs reduce boilerplate by 60%',
+                    'AOT compilation rivals Go binary size',
+                    'Blazor United merges server and client rendering'
+                ],
+                tags: ['csharp', 'dotnet', 'blazor', 'apis']
+            },
+            {
+                id: 'cross-language-migration',
+                name: 'Cross-Language Migration Strategies',
+                description: 'Java to C#, C# to Go, Python to Rust, JavaScript to TypeScript - patterns, tools, and pitfalls',
+                status: 'ready',
+                category: 'Migration',
+                documents: 45,
+                links: 178,
+                reading_hours: 19.8,
+                last_research: '6 hours ago',
+                next_scheduled: 'Tomorrow 4:00 AM',
+                knowledge_score: 88,
+                insights: [
+                    'Type system mapping crucial for static language migrations',
+                    'Async/await patterns vary significantly across languages',
+                    'Memory management models require careful translation'
+                ],
+                tags: ['migration', 'polyglot', 'patterns', 'tools']
+            },
+            {
+                id: 'rust-web-frameworks',
+                name: 'Rust Web Frameworks Comparison',
+                description: 'Actix, Rocket, Axum, Warp, Poem - performance, ergonomics, and ecosystem analysis',
+                status: 'ready',
+                category: 'Frameworks',
+                documents: 34,
+                links: 127,
+                reading_hours: 11.2,
+                last_research: '1 day ago',
+                next_scheduled: 'Wednesday 3:00 AM',
+                knowledge_score: 90,
+                insights: [
+                    'Axum integrates seamlessly with Tower ecosystem',
+                    'Rocket provides best developer experience',
+                    'Actix still leads in raw performance'
+                ],
+                tags: ['rust', 'web', 'frameworks', 'performance']
+            },
+            {
+                id: 'ai-code-review-automation',
+                name: 'AI-Powered Code Review & Quality',
+                description: 'LLM-based code review, automated refactoring suggestions, security vulnerability detection with AI',
+                status: 'researching',
+                category: 'AI Patterns',
+                documents: 41,
+                links: 156,
+                reading_hours: 13.4,
+                last_research: '2 hours ago',
+                next_scheduled: 'In 8 hours',
+                knowledge_score: 75,
+                progress: 45,
+                insights: [
+                    'GPT-4 catches 85% of code smells',
+                    'Specialized models outperform general LLMs for security',
+                    'Combining static analysis with AI improves accuracy'
+                ],
+                tags: ['ai', 'code-review', 'quality', 'security']
+            },
+            {
+                id: 'microservices-patterns',
+                name: 'Microservices Patterns Across Languages',
+                description: 'Service mesh, saga patterns, CQRS/Event Sourcing implementations in Java, C#, Go, and Rust',
+                status: 'ready',
+                category: 'Architecture',
+                documents: 78,
+                links: 289,
+                reading_hours: 22.1,
+                last_research: '12 hours ago',
+                next_scheduled: 'Tuesday 5:00 AM',
+                knowledge_score: 93,
+                insights: [
+                    'Istio service mesh works best with Go/Rust services',
+                    'Saga orchestration easier in Spring than choreography',
+                    'Event sourcing maturity: Java > C# > Go > Rust'
+                ],
+                tags: ['microservices', 'patterns', 'architecture', 'distributed']
+            },
+            {
+                id: 'database-orm-patterns',
+                name: 'Modern ORM and Database Patterns',
+                description: 'Entity Framework Core, Hibernate 6, SQLx, Diesel, Prisma - comparing approaches across ecosystems',
+                status: 'ready',
+                category: 'Data Access',
+                documents: 52,
+                links: 194,
+                reading_hours: 14.6,
+                last_research: '8 hours ago',
+                next_scheduled: 'Monday 6:00 AM',
+                knowledge_score: 86,
+                insights: [
+                    'Compile-time SQL verification trending (SQLx, Diesel)',
+                    'Prisma brings type-safety to Node.js ecosystem',
+                    'EF Core 8 rivals raw SQL performance'
+                ],
+                tags: ['database', 'orm', 'sql', 'patterns']
+            },
+            {
+                id: 'cloud-native-patterns',
+                name: 'Cloud-Native Development Patterns',
+                description: 'Kubernetes operators, serverless frameworks, cloud-agnostic architectures, FinOps practices',
+                status: 'pending',
+                category: 'Cloud',
+                documents: 0,
+                links: 0,
+                reading_hours: 0,
+                last_research: 'Never',
+                next_scheduled: 'Schedule pending',
+                knowledge_score: 0,
+                insights: [],
+                tags: ['cloud', 'kubernetes', 'serverless', 'architecture']
+            },
+            {
+                id: 'frontend-framework-migration',
+                name: 'Frontend Framework Migrations',
+                description: 'React to Vue, Angular to React, jQuery to modern frameworks, SSR/SSG patterns',
+                status: 'ready',
+                category: 'Frontend',
+                documents: 63,
+                links: 241,
+                reading_hours: 16.9,
+                last_research: '4 hours ago',
+                next_scheduled: 'Tomorrow 7:00 AM',
+                knowledge_score: 89,
+                insights: [
+                    'Incremental migration using micro-frontends most successful',
+                    'State management biggest challenge in framework switches',
+                    'Build tool migration often harder than framework code'
+                ],
+                tags: ['frontend', 'react', 'vue', 'migration']
+            }
+        ];
+        
+        // Get user-created topics from localStorage
+        const userTopics = JSON.parse(localStorage.getItem('knowledgeTopics') || '[]');
+        
+        // Transform user topics to match the display format
+        const transformedUserTopics = userTopics.map(topic => ({
+            id: topic.id,
+            name: topic.name,
+            description: topic.description,
+            status: topic.status || 'pending',
+            category: getCategoryDisplayName(topic.category),
+            documents: topic.documents || 0,
+            links: topic.links || 0,
+            reading_hours: topic.reading_hours || 0,
+            last_research: topic.lastResearch || 'Never',
+            next_scheduled: topic.status === 'pending' ? 'Schedule pending' : 'Not scheduled',
+            knowledge_score: topic.score || 0,
+            insights: topic.insights || [],
+            tags: generateTopicTags(topic),
+            isUserCreated: true
+        }));
+        
+        // Combine mock data with user topics
+        const allTopics = [...transformedUserTopics, ...topics];
+        
+        // Render the dashboard
+        const container = document.querySelector('.knowledge-topics-container');
+        container.innerHTML = `
+            <!-- Knowledge Dashboard Header -->
+            <div class="knowledge-dashboard-header">
+                <div class="knowledge-stats-grid">
+                    <div class="knowledge-stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">${allTopics.length}</div>
+                            <div class="stat-label">Active Topics</div>
+                        </div>
+                    </div>
+                    <div class="knowledge-stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">${allTopics.reduce((sum, t) => sum + t.documents, 0)}</div>
+                            <div class="stat-label">Documents</div>
+                        </div>
+                    </div>
+                    <div class="knowledge-stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">${allTopics.reduce((sum, t) => sum + t.links, 0)}</div>
+                            <div class="stat-label">Links Analyzed</div>
+                        </div>
+                    </div>
+                    <div class="knowledge-stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">${allTopics.reduce((sum, t) => sum + t.reading_hours, 0).toFixed(1)}h</div>
+                            <div class="stat-label">Reading Time</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Knowledge Topics Table -->
+            <div class="knowledge-table-container">
+                <table class="knowledge-table">
+                    <thead>
+                        <tr>
+                            <th>Topic</th>
+                            <th>Category</th>
+                            <th>Knowledge Score</th>
+                            <th>Resources</th>
+                            <th>Research Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allTopics.map(topic => renderKnowledgeTableRow(topic)).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading knowledge topics:', error);
+    }
+}
+
+function renderKnowledgeTableRow(topic) {
+    const statusClass = topic.status || 'pending';
+    const statusText = {
+        'ready': 'Ready',
+        'researching': 'Researching',
+        'pending': 'Pending'
+    }[statusClass];
+    
+    const scoreColor = topic.knowledge_score >= 80 ? '#10b981' : 
+                      topic.knowledge_score >= 60 ? '#f59e0b' : '#ef4444';
+    
+    return `
+        <tr class="knowledge-row" onclick="viewKnowledgeTopic('${topic.id}')">
+            <td>
+                <div class="topic-info">
+                    <div class="topic-name">${topic.name}</div>
+                    <div class="topic-description">${topic.description}</div>
+                    <div class="topic-tags">
+                        ${topic.tags && topic.tags.length > 0 ? topic.tags.map(tag => `<span class="topic-tag">${tag}</span>`).join('') : ''}
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="category-badge" data-category="${topic.category.toLowerCase().replace(/\s+/g, '-')}">${topic.category}</span>
+            </td>
+            <td>
+                <div class="knowledge-score">
+                    <div class="score-circle" style="--score: ${topic.knowledge_score}; --color: ${scoreColor}">
+                        <span class="score-value">${topic.knowledge_score}</span>
+                    </div>
+                    <div class="score-label">Knowledge Score</div>
+                </div>
+            </td>
+            <td>
+                <div class="resources-info">
+                    <div class="resource-stat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span>${topic.documents} docs</span>
+                    </div>
+                    <div class="resource-stat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        </svg>
+                        <span>${topic.links} links</span>
+                    </div>
+                    <div class="resource-stat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>${topic.reading_hours}h</span>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="research-info">
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                    <div class="research-schedule">
+                        <div class="schedule-item">Last: ${topic.last_research}</div>
+                        <div class="schedule-item">Next: ${topic.next_scheduled}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="topic-actions">
+                    <button class="action-btn" onclick="event.stopPropagation(); viewKnowledgeTopic('${topic.id}')" title="View Details">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn" onclick="event.stopPropagation(); triggerResearch('${topic.id}')" title="Trigger Research">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+// Store Confluence URLs temporarily
+let tempConfluenceUrls = [];
+
+function showAddKnowledgeTopicModal() {
+    // Clear form
+    document.getElementById('topicName').value = '';
+    document.getElementById('topicDescription').value = '';
+    document.getElementById('topicCategory').value = 'migration-patterns';
+    document.getElementById('sourceGitHub').checked = true;
+    document.getElementById('sourceBrowser').checked = true;
+    document.getElementById('sourceBlogs').checked = true;
+    document.getElementById('sourceConfluence').checked = false;
+    document.getElementById('confluenceUrlGroup').style.display = 'none';
+    
+    // Clear Confluence URLs
+    tempConfluenceUrls = [];
+    document.getElementById('confluenceUrlsList').innerHTML = '';
+    document.getElementById('confluenceUrlInput').value = '';
+    
+    // Show modal
+    showModal('addKnowledgeTopicModal');
+    
+    // Add listener for Confluence toggle
+    document.getElementById('sourceConfluence').addEventListener('change', function() {
+        const urlGroup = document.getElementById('confluenceUrlGroup');
+        if (this.checked) {
+            urlGroup.style.display = 'flex';
+        } else {
+            urlGroup.style.display = 'none';
+        }
+    });
+    
+    // Add enter key support for URL input
+    document.getElementById('confluenceUrlInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addConfluenceUrl();
+        }
+    });
+}
+
+function addConfluenceUrl() {
+    const input = document.getElementById('confluenceUrlInput');
+    const url = input.value.trim();
+    
+    if (!url) {
+        showNotification('Please enter a Confluence URL', 'error');
+        return;
+    }
+    
+    // Basic URL validation
+    if (!url.includes('atlassian.net') && !url.includes('/wiki/')) {
+        showNotification('Please enter a valid Confluence URL', 'error');
+        return;
+    }
+    
+    // Check for duplicates
+    if (tempConfluenceUrls.includes(url)) {
+        showNotification('This URL has already been added', 'warning');
+        return;
+    }
+    
+    // Add to array
+    tempConfluenceUrls.push(url);
+    
+    // Add to UI
+    renderConfluenceUrlsList();
+    
+    // Clear input
+    input.value = '';
+    input.focus();
+}
+
+function removeConfluenceUrl(index) {
+    tempConfluenceUrls.splice(index, 1);
+    renderConfluenceUrlsList();
+}
+
+function renderConfluenceUrlsList() {
+    const container = document.getElementById('confluenceUrlsList');
+    
+    if (tempConfluenceUrls.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = tempConfluenceUrls.map((url, index) => `
+        <div class="confluence-url-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #0052CC; flex-shrink: 0;">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6m0 6v6m11-6h-6m-6 0H1"/>
+            </svg>
+            <span style="flex: 1; font-size: 0.8125rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${extractConfluencePageName(url)}</span>
+            <button type="button" onclick="removeConfluenceUrl(${index})" style="background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; padding: 0.125rem; transition: all 0.2s ease;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                    <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+function extractConfluencePageName(url) {
+    // Try to extract a meaningful name from the URL
+    const parts = url.split('/');
+    const spaceIndex = parts.indexOf('spaces');
+    if (spaceIndex >= 0 && spaceIndex + 1 < parts.length) {
+        const space = parts[spaceIndex + 1];
+        const pageId = parts[parts.length - 1];
+        return `${space} - Page ${pageId}`;
+    }
+    return url;
+}
+
+function addKnowledgeTopic() {
+    // Get form values
+    const topicName = document.getElementById('topicName').value.trim();
+    const topicDescription = document.getElementById('topicDescription').value.trim();
+    const topicCategory = document.getElementById('topicCategory').value;
+    
+    // Get selected sources
+    const sources = {
+        github: document.getElementById('sourceGitHub').checked,
+        browser: document.getElementById('sourceBrowser').checked,
+        blogs: document.getElementById('sourceBlogs').checked,
+        confluence: document.getElementById('sourceConfluence').checked
+    };
+    
+    // Get Confluence URLs if selected
+    const confluenceUrls = sources.confluence ? tempConfluenceUrls : [];
+    
+    // Validate
+    if (!topicName) {
+        showNotification('Please enter a topic name', 'error');
+        return;
+    }
+    
+    if (!topicDescription) {
+        showNotification('Please enter a description of what to research', 'error');
+        return;
+    }
+    
+    if (!Object.values(sources).some(v => v)) {
+        showNotification('Please select at least one research source', 'error');
+        return;
+    }
+    
+    if (sources.confluence && confluenceUrls.length === 0) {
+        showNotification('Please add at least one Confluence URL or uncheck Confluence', 'error');
+        return;
+    }
+    
+    // Create topic object
+    const topic = {
+        id: Date.now().toString(),
+        name: topicName,
+        description: topicDescription,
+        category: topicCategory,
+        sources: sources,
+        confluenceUrls: confluenceUrls,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        resources: {
+            articles: 0,
+            repositories: 0,
+            documents: 0
+        },
+        score: 0
+    };
+    
+    // For now, just add to local storage (in real app, this would be an API call)
+    let topics = JSON.parse(localStorage.getItem('knowledgeTopics') || '[]');
+    topics.push(topic);
+    localStorage.setItem('knowledgeTopics', JSON.stringify(topics));
+    
+    // Close modal
+    closeModal('addKnowledgeTopicModal');
+    
+    // Show success notification
+    showNotification(`Knowledge topic "${topicName}" added successfully`, 'success');
+    
+    // Reload topics
+    loadKnowledgeTopics();
+}
+
+function viewKnowledgeTopic(topicId) {
+    console.log('View knowledge topic:', topicId);
+}
+
+function researchTopic(topicId) {
+    console.log('Research topic:', topicId);
+    showNotification('Research agent will start gathering information...', 'info');
+}
+
+function editKnowledgeTopic(topicId) {
+    console.log('Edit knowledge topic:', topicId);
+    showNotification('Edit functionality coming soon!', 'info');
+}
+
+function triggerResearch(topicId) {
+    console.log('Trigger research for topic:', topicId);
+    showNotification('Research agent triggered! The topic will be researched in the background.', 'success');
+    // TODO: Call API to trigger research agent
+}
+
+// Toggle knowledge store for a task
+function toggleKnowledge(stageId, taskIndex, enabled) {
+    console.log('Toggle knowledge for task:', stageId, taskIndex, 'Enabled:', enabled);
+    
+    if (enabled) {
+        showNotification('Knowledge Store enabled for this task', 'success');
+        // TODO: Show knowledge topic selector
+        // Store the enabled state for this task
+        window.knowledgeEnabledTasks = window.knowledgeEnabledTasks || {};
+        window.knowledgeEnabledTasks[`${stageId}_${taskIndex}`] = true;
+    } else {
+        showNotification('Knowledge Store disabled for this task', 'info');
+        // Remove the enabled state
+        if (window.knowledgeEnabledTasks) {
+            delete window.knowledgeEnabledTasks[`${stageId}_${taskIndex}`];
+        }
+    }
+}
+
+// Apply knowledge context to a task (deprecated - now using toggle)
+function applyKnowledge(stageId, taskIndex) {
+    console.log('Apply knowledge to task:', stageId, taskIndex);
+    showNotification('Knowledge context feature coming soon!', 'info');
+    // TODO: Show modal to select knowledge topics to apply
+    // This will enhance the task with relevant context from the knowledge store
 }
 

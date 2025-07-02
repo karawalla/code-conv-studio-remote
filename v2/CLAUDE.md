@@ -15,6 +15,14 @@ This is the Any-to-Any Code Conversion Studio v2 - a web application for convert
 
 ## UI Theme Guidelines - LIQUID GLASS DESIGN
 
+### 🎨 CRITICAL UI DESIGN PRINCIPLE
+**Think like a LEAD UI DESIGNER, not an entry-level HTML developer!**
+- Every UI element must be thoughtfully designed
+- Consider user experience and professional patterns
+- Never use basic HTML forms or textareas for complex data entry
+- Create elegant, intuitive interfaces that feel premium
+- Example: For adding multiple items, use a list interface with individual add/remove actions, NOT a textarea
+
 ### Color Palette
 - **Primary Color**: `#3b82f6` (Blue)
 - **Background**: Dark theme with `rgba(255, 255, 255, 0.02)` glass effect
@@ -31,7 +39,7 @@ This is the Any-to-Any Code Conversion Studio v2 - a web application for convert
   - Secondary: Transparent with border
 - **Forms**: Glass-morphism inputs with subtle borders
 - **NO GRADIENTS** - Keep it clean and consistent
-- **Icons**: Use emojis or consistent icon sets - no mixed styles
+- **Icons**: Use clean, simple SVG icons - avoid complex or ugly paths
 
 ### Component Structure
 - All cards should have:

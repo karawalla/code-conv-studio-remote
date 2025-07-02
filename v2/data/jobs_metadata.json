@@ -3783,6 +3783,1274 @@
       "created_by": "system",
       "estimated_completion": null,
       "actual_completion": null
+    },
+    "847555f7-6837-4e4c-9f9a-bd1d5edcfa24": {
+      "id": "847555f7-6837-4e4c-9f9a-bd1d5edcfa24",
+      "name": "Mig002002",
+      "description": "spring-boot-examples modernization",
+      "job_type": "modernization",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": null,
+      "target_name": "",
+      "modernization_options": [
+        "cicd"
+      ],
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Assessment",
+          "description": "Analyze current codebase and identify modernization opportunities",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Current Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Technical Debt",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Modernization Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Current State",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "cicd_setup",
+          "name": "CI/CD Pipeline Setup",
+          "description": "Implement continuous integration and deployment pipelines",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "DevOps Engineer"
+          ],
+          "capabilities": [
+            "ci_pipeline",
+            "cd_pipeline",
+            "infrastructure"
+          ],
+          "tasks": [
+            {
+              "name": "Setup Build Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Automated Tests",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Setup Deployment Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Environments",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "testing_validation",
+          "name": "Testing & Validation",
+          "description": "Validate modernization changes",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix"
+          ],
+          "tasks": [
+            {
+              "name": "Run Automated Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Performance Testing",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Security Scanning",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "documentation",
+          "name": "Documentation & Handover",
+          "description": "Document changes and prepare for handover",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Technical Writer",
+            "Project Manager"
+          ],
+          "capabilities": [
+            "document_code",
+            "create_guides",
+            "send_email"
+          ],
+          "tasks": [
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Create User Guides",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Prepare Handover Report",
+              "status": "pending",
+              "agent": "Project Manager"
+            },
+            {
+              "name": "Send Completion Email",
+              "status": "pending",
+              "agent": "Project Manager"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 4,
+      "config": {
+        "priority": "medium",
+        "modernization_options": [
+          "cicd"
+        ]
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-07-01T02:59:32.787408",
+      "updated_at": "2025-07-01T02:59:32.787408",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "f43a9c84-917b-4bd9-a260-f4a55234f1b3": {
+      "id": "f43a9c84-917b-4bd9-a260-f4a55234f1b3",
+      "name": "test001",
+      "description": "spring-boot-examples modernization",
+      "job_type": "modernization",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": null,
+      "target_name": "",
+      "modernization_options": [
+        "devops"
+      ],
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Assessment",
+          "description": "Analyze current codebase and identify modernization opportunities",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Current Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Technical Debt",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Modernization Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Current State",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Assessment",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "testing_validation",
+          "name": "Testing & Validation",
+          "description": "Validate modernization changes",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix"
+          ],
+          "tasks": [
+            {
+              "name": "Run Automated Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Performance Testing",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Security Scanning",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "documentation",
+          "name": "Documentation & Completion",
+          "description": "Document modernization changes",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "document_code",
+            "create_guides"
+          ],
+          "tasks": [
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Create User Guides",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Send Completion Notification",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 3,
+      "config": {
+        "priority": "medium",
+        "modernization_options": [
+          "devops"
+        ],
+        "project_management_enabled": false
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-07-01T05:00:52.595701",
+      "updated_at": "2025-07-01T05:00:52.595701",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "a831920b-4b7f-4d1a-8112-a79368b9a74e": {
+      "id": "a831920b-4b7f-4d1a-8112-a79368b9a74e",
+      "name": "Test1111",
+      "description": "spring-boot-examples modernization",
+      "job_type": "modernization",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": null,
+      "target_name": "",
+      "modernization_options": [
+        "devops"
+      ],
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Assessment",
+          "description": "Analyze current codebase and identify modernization opportunities",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Current Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Technical Debt",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Modernization Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Current State",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Assessment",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "testing_validation",
+          "name": "Testing & Validation",
+          "description": "Validate modernization changes",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix"
+          ],
+          "tasks": [
+            {
+              "name": "Run Automated Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Performance Testing",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Security Scanning",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "documentation",
+          "name": "Documentation & Completion",
+          "description": "Document modernization changes",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "document_code",
+            "create_guides"
+          ],
+          "tasks": [
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Create User Guides",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Send Completion Notification",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 3,
+      "config": {
+        "priority": "medium",
+        "modernization_options": [
+          "devops"
+        ],
+        "project_management_enabled": false
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-07-01T06:52:56.924660",
+      "updated_at": "2025-07-01T06:52:56.924660",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "90861243-335e-4375-a19e-950d587a3ef5": {
+      "id": "90861243-335e-4375-a19e-950d587a3ef5",
+      "name": "jhhjgj",
+      "description": "spring-boot-examples to Rust migration",
+      "job_type": "migration",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
+      "target_name": "Rust",
+      "modernization_options": [],
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Planning",
+          "description": "Analyze source code and create migration plan",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Source Structure",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Dependencies",
+              "status": "pending",
+              "agent": "Code Architect",
+              "config": {
+                "credentialName": "GitHub - Migration Bot"
+              }
+            },
+            {
+              "name": "Create Migration Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Findings",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_migration",
+          "name": "Code Migration",
+          "description": "Migrate code from source to target framework",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "migrate",
+            "generate",
+            "refactor",
+            "file_create"
+          ],
+          "tasks": [
+            {
+              "name": "Setup Target Environment",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Migrate Core Components",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Transform Business Logic",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Dependencies",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "validation_fix",
+          "name": "Validation & Fix",
+          "description": "Validate migrated code and fix issues",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix",
+            "document_code"
+          ],
+          "tasks": [
+            {
+              "name": "Run Validation Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Debug & Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Code Quality Review",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "deployment_prep",
+          "name": "Deployment Preparation",
+          "description": "Prepare for deployment with CI/CD setup",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "DevOps Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "ci_pipeline",
+            "cd_pipeline",
+            "infrastructure",
+            "security_scan"
+          ],
+          "tasks": [
+            {
+              "name": "Setup CI/CD Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Infrastructure",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Run Security Scans",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Setup Monitoring",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Create Deployment Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "project_closure",
+          "name": "Project Completion",
+          "description": "Generate final deliverables",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "create_guides"
+          ],
+          "tasks": [
+            {
+              "name": "Generate Status Report",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Create Migration Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Send Completion Notification",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 5,
+      "config": {
+        "priority": "medium",
+        "project_management_enabled": false
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-07-01T06:55:23.738870",
+      "updated_at": "2025-07-01T06:56:06.261033",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "1228375f-7c82-4e2f-999b-67ee59d22bbf": {
+      "id": "1228375f-7c82-4e2f-999b-67ee59d22bbf",
+      "name": "bjhjjh",
+      "description": "spring-boot-examples to Rust migration",
+      "job_type": "migration",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": "d9f30fa7-175e-4c4f-8e0c-5fde5a4aa7e2",
+      "target_name": "Rust",
+      "modernization_options": [],
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Planning",
+          "description": "Analyze source code and create migration plan",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Source Structure",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Dependencies",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Migration Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Findings",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_migration",
+          "name": "Code Migration",
+          "description": "Migrate code from source to target framework",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "migrate",
+            "generate",
+            "refactor",
+            "file_create"
+          ],
+          "tasks": [
+            {
+              "name": "Setup Target Environment",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Migrate Core Components",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Transform Business Logic",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Dependencies",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "validation_fix",
+          "name": "Validation & Fix",
+          "description": "Validate migrated code and fix issues",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix",
+            "document_code"
+          ],
+          "tasks": [
+            {
+              "name": "Run Validation Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Debug & Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Code Quality Review",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "deployment_prep",
+          "name": "Deployment Preparation",
+          "description": "Prepare for deployment with CI/CD setup",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "DevOps Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "ci_pipeline",
+            "cd_pipeline",
+            "infrastructure",
+            "security_scan"
+          ],
+          "tasks": [
+            {
+              "name": "Setup CI/CD Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Infrastructure",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Run Security Scans",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Setup Monitoring",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Create Deployment Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "project_closure",
+          "name": "Project Completion",
+          "description": "Generate final deliverables",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "create_guides"
+          ],
+          "tasks": [
+            {
+              "name": "Generate Status Report",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Create Migration Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Send Completion Notification",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 5,
+      "config": {
+        "priority": "medium",
+        "project_management_enabled": false
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-07-01T07:00:59.446255",
+      "updated_at": "2025-07-01T07:00:59.446255",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "7f3620bb-490a-445a-965a-a02c353d5bd6": {
+      "id": "7f3620bb-490a-445a-965a-a02c353d5bd6",
+      "name": "2Go",
+      "description": "spring-boot-examples to Go migration",
+      "job_type": "migration",
+      "source_id": "b431cd82-e152-4143-946b-0d9b2ce05f59",
+      "source_name": "spring-boot-examples",
+      "target_id": "02d28552-5124-4930-af64-de851992a1bd",
+      "target_name": "Go",
+      "modernization_options": [],
+      "status": "pending",
+      "progress": 0,
+      "stages": [
+        {
+          "id": "code_analysis",
+          "name": "Code Analysis & Planning",
+          "description": "Analyze source code and create migration plan",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Architect"
+          ],
+          "capabilities": [
+            "analyze",
+            "plan",
+            "document_architecture"
+          ],
+          "tasks": [
+            {
+              "name": "Analyze Source Structure",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Identify Dependencies",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Create Migration Plan",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Architecture",
+              "status": "pending",
+              "agent": "Code Architect"
+            },
+            {
+              "name": "Document Findings",
+              "status": "pending",
+              "agent": "Code Architect"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "code_migration",
+          "name": "Code Migration",
+          "description": "Migrate code from source to target framework",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer"
+          ],
+          "capabilities": [
+            "migrate",
+            "generate",
+            "refactor",
+            "file_create"
+          ],
+          "tasks": [
+            {
+              "name": "Setup Target Environment",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Migrate Core Components",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Transform Business Logic",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Dependencies",
+              "status": "pending",
+              "agent": "Code Engineer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "validation_fix",
+          "name": "Validation & Fix",
+          "description": "Validate migrated code and fix issues",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Code Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "validate",
+            "debug_fix",
+            "document_code"
+          ],
+          "tasks": [
+            {
+              "name": "Run Validation Tests",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Debug & Fix Issues",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Code Quality Review",
+              "status": "pending",
+              "agent": "Code Engineer"
+            },
+            {
+              "name": "Update Documentation",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "deployment_prep",
+          "name": "Deployment Preparation",
+          "description": "Prepare for deployment with CI/CD setup",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "DevOps Engineer",
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "ci_pipeline",
+            "cd_pipeline",
+            "infrastructure",
+            "security_scan"
+          ],
+          "tasks": [
+            {
+              "name": "Setup CI/CD Pipeline",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Configure Infrastructure",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Run Security Scans",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Setup Monitoring",
+              "status": "pending",
+              "agent": "DevOps Engineer"
+            },
+            {
+              "name": "Create Deployment Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "project_closure",
+          "name": "Project Completion",
+          "description": "Generate final deliverables",
+          "status": "pending",
+          "progress": 0,
+          "agents": [
+            "Technical Writer"
+          ],
+          "capabilities": [
+            "create_guides"
+          ],
+          "tasks": [
+            {
+              "name": "Generate Status Report",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Create Migration Guide",
+              "status": "pending",
+              "agent": "Technical Writer"
+            },
+            {
+              "name": "Send Completion Notification",
+              "status": "pending",
+              "agent": "Technical Writer"
+            }
+          ],
+          "artifacts": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "current_stage": 0,
+      "total_stages": 5,
+      "config": {
+        "priority": "medium",
+        "project_management_enabled": false
+      },
+      "metadata": {
+        "jira_epic": null,
+        "jira_tickets": [],
+        "slack_channel": null,
+        "email_recipients": [],
+        "sprint_info": {
+          "current_sprint": null,
+          "sprint_goal": null,
+          "velocity": 0
+        }
+      },
+      "artifacts": [],
+      "logs": [],
+      "created_at": "2025-07-02T03:09:48.939605",
+      "updated_at": "2025-07-02T03:09:48.939605",
+      "created_by": "system",
+      "estimated_completion": null,
+      "actual_completion": null
     }
   }
 }

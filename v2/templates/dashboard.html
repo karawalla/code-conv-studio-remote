@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/targets.css') }}?v=2">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/agents.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jobs.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/knowledge.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/config.css') }}?v=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/credentials.css') }}?v=1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,6 +49,124 @@
             <div class="selection-modal-body">
                 <div class="selection-grid" id="targetSelectionGrid">
                     <!-- Target cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modernization Options Modal -->
+    <div id="modernizationOptionsModal" class="selection-modal">
+        <div class="selection-modal-content" style="max-width: 800px;">
+            <div class="selection-modal-header">
+                <h3>Select Modernization Options</h3>
+                <button class="selection-modal-close" onclick="closeSelectionModal('modernizationOptions')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="selection-modal-body">
+                <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">Select one or more modernization options for your codebase</p>
+                
+                <div class="modernization-categories">
+                    <!-- Infrastructure & Deployment -->
+                    <div class="modernization-category">
+                        <h4 style="color: var(--text-primary); margin-bottom: 1rem;">Infrastructure & Deployment</h4>
+                        <div class="selection-grid" style="grid-template-columns: repeat(2, 1fr);">
+                            <div class="selection-card modernization-option" data-option="cicd" onclick="toggleModernizationOption('cicd')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                                <div class="selection-card-name">CI/CD Pipeline</div>
+                                <div class="selection-card-description">Automated build, test & deploy</div>
+                            </div>
+                            <div class="selection-card modernization-option" data-option="cloud" onclick="toggleModernizationOption('cloud')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
+                                </svg>
+                                <div class="selection-card-name">Cloud Migration</div>
+                                <div class="selection-card-description">Rehost, replatform or cloud-native</div>
+                            </div>
+                            <div class="selection-card modernization-option" data-option="containers" onclick="toggleModernizationOption('containers')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 9h-4V3h-6v6H5l-3 3h22l-3-3z M12 6h2v3h-2V6z M8 6h2v3H8V6z M16 11H8v3h8v-3z M20 11h2v3h-2v-3z M4 11h2v3H4v-3z"/>
+                                </svg>
+                                <div class="selection-card-name">Containerization</div>
+                                <div class="selection-card-description">Docker/K8s deployment</div>
+                            </div>
+                            <div class="selection-card modernization-option" data-option="devops" onclick="toggleModernizationOption('devops')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                                <div class="selection-card-name">DevOps Setup</div>
+                                <div class="selection-card-description">GitOps, IaC, automation</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Architecture & Code -->
+                    <div class="modernization-category">
+                        <h4 style="color: var(--text-primary); margin-bottom: 1rem;">Architecture & Code</h4>
+                        <div class="selection-grid" style="grid-template-columns: repeat(2, 1fr);">
+                            <div class="selection-card modernization-option" data-option="microservices" onclick="toggleModernizationOption('microservices')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                                </svg>
+                                <div class="selection-card-name">Microservices</div>
+                                <div class="selection-card-description">Break monolith into services</div>
+                            </div>
+                            <div class="selection-card modernization-option" data-option="api" onclick="toggleModernizationOption('api')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12h-8l-3.5-3.5M9.5 5.5L3 12l6.5 6.5M21 12v7a2 2 0 0 1-2 2H5"/>
+                                </svg>
+                                <div class="selection-card-name">API Enablement</div>
+                                <div class="selection-card-description">RESTful/GraphQL API layer</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Operations & Quality -->
+                    <div class="modernization-category">
+                        <h4 style="color: var(--text-primary); margin-bottom: 1rem;">Operations & Quality</h4>
+                        <div class="selection-grid" style="grid-template-columns: repeat(2, 1fr);">
+                            <div class="selection-card modernization-option" data-option="observability" onclick="toggleModernizationOption('observability')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <div class="selection-card-name">Observability</div>
+                                <div class="selection-card-description">Monitoring, logging, tracing</div>
+                            </div>
+                            <div class="selection-card modernization-option" data-option="security" onclick="toggleModernizationOption('security')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                <div class="selection-card-name">Security</div>
+                                <div class="selection-card-description">Zero Trust, SAST/DAST</div>
+                            </div>
+                            <div class="selection-card modernization-option" data-option="data" onclick="toggleModernizationOption('data')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                                </svg>
+                                <div class="selection-card-name">Data Modernization</div>
+                                <div class="selection-card-description">Analytics, ETL, data lakes</div>
+                            </div>
+                            <div class="selection-card modernization-option" data-option="performance" onclick="toggleModernizationOption('performance')">
+                                <svg class="selection-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                                </svg>
+                                <div class="selection-card-name">Performance Optimization</div>
+                                <div class="selection-card-description">Caching, async, optimization</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="selection-modal-footer" style="margin-top: 2rem;">
+                    <button class="btn btn-secondary" onclick="closeSelectionModal('modernizationOptions')">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmModernizationOptions()">
+                        <span>Confirm Selection</span>
+                        <span id="modernizationOptionsCount" style="margin-left: 0.5rem; display: none;">(0)</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -117,6 +236,13 @@
                     </svg>
                     <span>Jobs</span>
                     <span class="nav-badge">2</span>
+                </a>
+                
+                <a href="#knowledge" class="nav-item" data-page="knowledge">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    <span>Knowledge Store</span>
                 </a>
                 
                 <div class="nav-divider"></div>
@@ -409,14 +535,35 @@
                     <!-- Inline Create Job Form -->
                     <div class="inline-create-job" id="inlineCreateJob" style="display: none;">
                         <div class="create-job-header">
-                            <h3>Create New Migration Job</h3>
-                            <p>Quick setup with @ mentions</p>
+                            <h3>Create New Job</h3>
+                            <p>Quick setup for migration or modernization</p>
                         </div>
                         
                         <div class="create-job-form simplified">
+                            <!-- Job Type Selection -->
+                            <div class="form-group">
+                                <label>Job Type</label>
+                                <div class="job-type-selection">
+                                    <button type="button" class="job-type-card" id="jobTypeMigration" onclick="selectJobType('migration')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                        <span class="job-type-title">Migration</span>
+                                        <span class="job-type-desc">Transform codebase to new stack</span>
+                                    </button>
+                                    <button type="button" class="job-type-card" id="jobTypeModernization" onclick="selectJobType('modernization')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                        </svg>
+                                        <span class="job-type-title">Modernization</span>
+                                        <span class="job-type-desc">Upgrade existing codebase</span>
+                                    </button>
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label>Job Name</label>
-                                <input type="text" id="inlineJobName" placeholder="Spring to Rust Migration" class="form-input liquid-glass">
+                                <input type="text" id="inlineJobName" placeholder="Enter job name" class="form-input liquid-glass">
                             </div>
                             
                             <div class="form-row">
@@ -430,8 +577,8 @@
                                     </button>
                                 </div>
                                 
-                                <div class="form-group">
-                                    <label>Target</label>
+                                <div class="form-group" id="targetSelectionGroup">
+                                    <label id="targetLabel">Target</label>
                                     <button type="button" class="selection-button" id="targetSelectionBtn" onclick="showTargetSelection()">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-3-3-3 3v-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h2m0-4v4m0 0h6m-6 0H9"/>
@@ -441,6 +588,17 @@
                                 </div>
                             </div>
                             
+                            <!-- Project Management Options -->
+                            <div class="form-group project-management-section">
+                                <label>Additional Options</label>
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" id="projectManagementEnabled">
+                                    <label for="projectManagementEnabled">
+                                        <strong>Enable Project Management</strong>
+                                        <small>Include Jira integration, sprint planning, and PM workflows</small>
+                                    </label>
+                                </div>
+                            </div>
                             
                             <div class="form-actions">
                                 <button class="btn btn-secondary" onclick="cancelInlineJob()">Cancel</button>
@@ -571,6 +729,35 @@
                             <div class="connections-list" id="connectionsList">
                                 <!-- Connection status will be shown here -->
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Knowledge Store Page -->
+                <div id="knowledgePage" class="page">
+                    <div class="page-header">
+                        <div>
+                            <p>Manage knowledge topics for continuous learning and context enhancement</p>
+                        </div>
+                        <button class="btn btn-primary liquid-glass" onclick="showAddKnowledgeTopicModal()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add Topic
+                        </button>
+                    </div>
+                    
+                    <div class="knowledge-topics-container">
+                        <div id="knowledgeTopicsGrid" class="knowledge-grid">
+                            <!-- Knowledge topics will be loaded here -->
+                        </div>
+                        <div id="noKnowledgeMessage" class="empty-state liquid-glass" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                            </svg>
+                            <h4>No knowledge topics yet</h4>
+                            <p>Add your first topic to start building your knowledge store</p>
+                            <button class="btn btn-primary liquid-glass" onclick="showAddKnowledgeTopicModal()">Add Topic</button>
                         </div>
                     </div>
                 </div>
@@ -1323,6 +1510,132 @@
                 <button class="btn btn-danger" onclick="deleteAgent()" style="margin-right: auto;">Delete Agent</button>
                 <button class="btn btn-secondary" onclick="closeModal('editAgentModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="updateAgent()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Knowledge Topic Modal -->
+    <div id="addKnowledgeTopicModal" class="modal">
+        <div class="modal-content liquid-glass" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 style="font-size: 1.5rem; font-weight: 600; color: var(--text-primary);">Add Knowledge Topic</h3>
+                <button class="modal-close" onclick="closeModal('addKnowledgeTopicModal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 2rem; max-height: calc(90vh - 200px); overflow-y: auto;">
+                <form id="addKnowledgeTopicForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Topic Name</label>
+                        <input type="text" id="topicName" class="liquid-glass-input" style="padding: 1rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-primary); font-size: 1rem; transition: all 0.2s ease;" placeholder="e.g., Java Spring Boot Migration Patterns" required>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Description</label>
+                        <textarea id="topicDescription" class="liquid-glass-textarea" style="padding: 1rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-primary); font-size: 1rem; transition: all 0.2s ease; resize: vertical; min-height: 100px;" rows="4" placeholder="What specific information should be gathered for this topic? Include technologies, patterns, best practices, etc." required></textarea>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Category</label>
+                        <div style="position: relative;">
+                            <select id="topicCategory" class="liquid-glass-select" style="width: 100%; padding: 1rem; padding-right: 3rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-primary); font-size: 1rem; transition: all 0.2s ease; appearance: none; cursor: pointer;">
+                                <option value="migration-patterns">Migration Patterns</option>
+                                <option value="framework-analysis">Framework Analysis</option>
+                                <option value="cloud-architecture">Cloud Architecture</option>
+                                <option value="ai-ml-patterns">AI/ML Patterns</option>
+                                <option value="security-practices">Security Practices</option>
+                                <option value="performance-optimization">Performance Optimization</option>
+                                <option value="best-practices">Best Practices</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <div style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-secondary);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                                    <path d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Research Sources</label>
+                        <div class="source-toggles" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+                            <label class="source-toggle">
+                                <input type="checkbox" id="sourceGitHub" checked>
+                                <span class="source-toggle-content liquid-glass" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s ease;">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" style="width: 20px; height: 20px;">
+                                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                                    </svg>
+                                    <span style="font-size: 0.875rem; font-weight: 500;">GitHub</span>
+                                </span>
+                            </label>
+                            
+                            <label class="source-toggle">
+                                <input type="checkbox" id="sourceBrowser" checked>
+                                <span class="source-toggle-content liquid-glass" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s ease;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                    </svg>
+                                    <span style="font-size: 0.875rem; font-weight: 500;">Web Browser</span>
+                                </span>
+                            </label>
+                            
+                            <label class="source-toggle">
+                                <input type="checkbox" id="sourceBlogs" checked>
+                                <span class="source-toggle-content liquid-glass" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s ease;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                    <span style="font-size: 0.875rem; font-weight: 500;">Tech Blogs</span>
+                                </span>
+                            </label>
+                            
+                            <label class="source-toggle">
+                                <input type="checkbox" id="sourceConfluence">
+                                <span class="source-toggle-content liquid-glass" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s ease;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m2 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <span style="font-size: 0.875rem; font-weight: 500;">Confluence</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="confluenceUrlGroup" style="display: none; flex-direction: column; gap: 0.5rem; margin-top: -0.5rem;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Confluence Pages</label>
+                        
+                        <div id="confluenceUrlsList" style="display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.5rem; max-height: 120px; overflow-y: auto;">
+                            <!-- URLs will be added here dynamically -->
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="text" id="confluenceUrlInput" class="liquid-glass-input" style="flex: 1; padding: 0.625rem 0.875rem; background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: var(--text-primary); font-size: 0.8125rem; transition: all 0.2s ease;" placeholder="https://company.atlassian.net/wiki/spaces/...">
+                            <button type="button" onclick="addConfluenceUrl()" class="liquid-glass" style="padding: 0.625rem; background: rgba(59, 130, 246, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; color: #3b82f6; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                                    <path d="M12 4v16m8-8H4"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="padding: 1.5rem 2rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="btn btn-secondary liquid-glass" style="padding: 0.75rem 1.5rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.2s ease;" onclick="closeModal('addKnowledgeTopicModal')">Cancel</button>
+                <button class="btn btn-primary liquid-glass" style="padding: 0.75rem 1.5rem; background: rgba(59, 130, 246, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; color: #3b82f6; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem;" onclick="addKnowledgeTopic()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <path d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Topic
+                </button>
             </div>
         </div>
     </div>
