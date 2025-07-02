@@ -17,7 +17,11 @@ class JobsService:
         """Initialize the jobs service"""
         self.data_folder = data_folder
         self.jobs_file = os.path.join(data_folder, 'jobs_metadata.json')
+        self.jobs_storage_path = os.path.join(data_folder, 'jobs')
         self._ensure_file_exists()
+        
+        # Ensure jobs storage directory exists
+        os.makedirs(self.jobs_storage_path, exist_ok=True)
         
     def _ensure_file_exists(self):
         """Ensure jobs metadata file exists"""
@@ -127,6 +131,9 @@ class JobsService:
             data['jobs'] = {}
         data['jobs'][job_id] = job
         self._save_jobs(data)
+        
+        # Create job folder structure
+        self._create_job_folder_structure(job_id, stages)
         
         return job
         
@@ -699,4 +706,34 @@ class JobsService:
             'completed_at': None
         })
         
-        return stages
+        return stages    
+    def _create_job_folder_structure(self, job_id: str, stages: List[Dict]):
+        """Create folder structure for a job with task subdirectories"""
+        try:
+            # Create main job folder
+            job_path = os.path.join(self.jobs_storage_path, job_id)
+            os.makedirs(job_path, exist_ok=True)
+            
+            # Create folders for each stage and task
+            for stage in stages:
+                stage_id = stage['id']
+                tasks = stage.get('tasks', [])
+                
+                for task_index, task in enumerate(tasks):
+                    # Clean task name for folder
+                    task_name = task.get('name', 'unknown').lower().replace(' ', '_')
+                    task_folder = os.path.join(job_path, stage_id, f"{task_index}_{task_name}")
+                    
+                    # Create input, output, and data folders for each task
+                    os.makedirs(os.path.join(task_folder, 'input'), exist_ok=True)
+                    os.makedirs(os.path.join(task_folder, 'output'), exist_ok=True)
+                    os.makedirs(os.path.join(task_folder, 'data'), exist_ok=True)
+                    
+                    logger.info(f"Created task folder structure: {task_folder}")
+            
+            logger.info(f"Created job folder structure for job {job_id}")
+            
+        except Exception as e:
+            logger.error(f"Error creating job folder structure: {e}")
+            # Don't fail the job creation if folder creation fails
+            pass

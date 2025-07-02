@@ -10,6 +10,8 @@ import logging
 from datetime import datetime
 from services import SourcesService
 import base64
+import shutil
+from pathlib import Path
 
 # Application Configuration
 class Config:
@@ -1048,17 +1050,53 @@ def execute_task(job_id, stage_id, task_index):
         
         # Get source information for working directory
         source = sources_service.get_source(job.get('source_id'))
-        working_directory = None
-        if source:
-            if source['type'] == 'local':
-                working_directory = source.get('info', {}).get('path')
-            elif source['type'] == 'github':
-                # For GitHub sources, use the cloned repository path
-                repo_name = source.get('url', '').split('/')[-1].replace('.git', '')
-                working_directory = os.path.join(Config.DATA_FOLDER, 'sources', source['id'], repo_name)
+        source_path = None
         
-        if not working_directory:
-            working_directory = os.getcwd()
+        if source:
+            # The source path is stored in the 'path' field for both local and GitHub sources
+            source_path = source.get('path')
+            
+        # Create task folder paths
+        task_name = task.get('name', 'unknown').lower().replace(' ', '_')
+        task_folder = os.path.join(Config.DATA_FOLDER, 'jobs', job_id, stage_id, f"{task_index}_{task_name}")
+        task_input_folder = os.path.join(task_folder, 'input')
+        task_output_folder = os.path.join(task_folder, 'output')
+        
+        # Ensure task folders exist
+        os.makedirs(task_input_folder, exist_ok=True)
+        os.makedirs(task_output_folder, exist_ok=True)
+        
+        # Copy source code to task input folder if source exists
+        if source_path and os.path.exists(source_path):
+            # For Code Architect analyze source task, copy the source to input folder
+            if 'architect' in task.get('agent', '').lower() and 'analyze' in task.get('name', '').lower():
+                logger.info(f"Copying source from {source_path} to {task_input_folder}")
+                
+                # Clear the input folder first
+                for item in os.listdir(task_input_folder):
+                    item_path = os.path.join(task_input_folder, item)
+                    if os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+                    else:
+                        os.remove(item_path)
+                
+                # Copy all contents from source to input folder
+                for item in os.listdir(source_path):
+                    src_item = os.path.join(source_path, item)
+                    dst_item = os.path.join(task_input_folder, item)
+                    if os.path.isdir(src_item):
+                        shutil.copytree(src_item, dst_item)
+                    else:
+                        shutil.copy2(src_item, dst_item)
+                        
+                logger.info(f"Source code copied to task input folder: {task_input_folder}")
+        
+        # Use task input folder as working directory for analyze tasks
+        if 'architect' in task.get('agent', '').lower() and 'analyze' in task.get('name', '').lower():
+            working_directory = task_input_folder
+        else:
+            # For other tasks, use the source path or current directory
+            working_directory = source_path if source_path and os.path.exists(source_path) else os.getcwd()
         
         # Prepare execution context
         context = {
@@ -1076,7 +1114,10 @@ def execute_task(job_id, stage_id, task_index):
             'agent': task.get('agent', ''),
             'capability': task.get('name', '').lower().replace(' ', '_'),
             'task_config': task.get('config', {}),
-            'working_directory': working_directory
+            'working_directory': working_directory,
+            'task_folder': task_folder,
+            'task_input_folder': task_input_folder,
+            'task_output_folder': task_output_folder
         }
         
         # Execute the task
@@ -1140,6 +1181,189 @@ def get_task_output(job_id, stage_id, task_index):
             
     except Exception as e:
         logger.error(f"Error getting task output: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/jobs/<job_id>/stages/<stage_id>/tasks/<int:task_index>/files')
+def get_task_files(job_id, stage_id, task_index):
+    """Get the file structure for a task's folders"""
+    try:
+        from services.jobs_service import JobsService
+        import json
+        
+        jobs_service = JobsService(Config.DATA_FOLDER)
+        job = jobs_service.get_job(job_id)
+        
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        # Find the task
+        stage = next((s for s in job.get('stages', []) if s['id'] == stage_id), None)
+        if not stage or task_index >= len(stage.get('tasks', [])):
+            return jsonify({'error': 'Task not found'}), 404
+            
+        task = stage['tasks'][task_index]
+        task_name = task.get('name', 'unknown').lower().replace(' ', '_')
+        
+        # Build task folder path
+        task_folder = os.path.join(Config.DATA_FOLDER, 'jobs', job_id, stage_id, f"{task_index}_{task_name}")
+        
+        # Get folder structure
+        folder_structure = {
+            'task_name': task['name'],
+            'task_folder': task_folder,
+            'folders': {}
+        }
+        
+        # Check each subfolder
+        for subfolder in ['input', 'output', 'data']:
+            subfolder_path = os.path.join(task_folder, subfolder)
+            if os.path.exists(subfolder_path):
+                folder_structure['folders'][subfolder] = _get_folder_tree(subfolder_path, max_depth=3)
+            else:
+                folder_structure['folders'][subfolder] = {'exists': False}
+                
+        return jsonify(folder_structure)
+        
+    except Exception as e:
+        logger.error(f"Error getting task files: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def _get_folder_tree(path: str, current_depth: int = 0, max_depth: int = 3) -> dict:
+    """Get folder tree structure with limited depth"""
+    if current_depth >= max_depth:
+        return {'type': 'folder', 'truncated': True}
+        
+    result = {
+        'type': 'folder' if os.path.isdir(path) else 'file',
+        'name': os.path.basename(path),
+        'path': path
+    }
+    
+    if os.path.isdir(path):
+        result['children'] = []
+        try:
+            items = sorted(os.listdir(path))
+            for item in items:
+                if item.startswith('.'):
+                    continue
+                item_path = os.path.join(path, item)
+                if os.path.isdir(item_path):
+                    child = _get_folder_tree(item_path, current_depth + 1, max_depth)
+                    result['children'].append(child)
+                else:
+                    # For files, include size
+                    try:
+                        size = os.path.getsize(item_path)
+                        result['children'].append({
+                            'type': 'file',
+                            'name': item,
+                            'path': item_path,
+                            'size': size
+                        })
+                    except:
+                        result['children'].append({
+                            'type': 'file',
+                            'name': item,
+                            'path': item_path
+                        })
+        except PermissionError:
+            result['error'] = 'Permission denied'
+    else:
+        # For files, include size
+        try:
+            result['size'] = os.path.getsize(path)
+        except:
+            pass
+            
+    return result
+
+@app.route('/api/jobs/<job_id>/files/content', methods=['POST'])
+def get_file_content(job_id):
+    """Get content of a specific file"""
+    try:
+        data = request.get_json()
+        file_path = data.get('path')
+        
+        if not file_path:
+            return jsonify({'error': 'File path required'}), 400
+            
+        # Security check - ensure file is within job folder
+        jobs_folder = os.path.join(Config.DATA_FOLDER, 'jobs', job_id)
+        abs_file_path = os.path.abspath(file_path)
+        abs_jobs_folder = os.path.abspath(jobs_folder)
+        
+        if not abs_file_path.startswith(abs_jobs_folder):
+            return jsonify({'error': 'Access denied'}), 403
+            
+        if not os.path.exists(abs_file_path):
+            return jsonify({'error': 'File not found'}), 404
+            
+        # Read file content
+        try:
+            with open(abs_file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            # Limit content size for UI
+            max_size = 1024 * 1024  # 1MB
+            if len(content) > max_size:
+                content = content[:max_size] + "\n\n... [Content truncated]"
+                
+            return jsonify({
+                'path': file_path,
+                'name': os.path.basename(file_path),
+                'content': content,
+                'size': os.path.getsize(abs_file_path)
+            })
+        except UnicodeDecodeError:
+            return jsonify({
+                'path': file_path,
+                'name': os.path.basename(file_path),
+                'content': '[Binary file]',
+                'binary': True,
+                'size': os.path.getsize(abs_file_path)
+            })
+            
+    except Exception as e:
+        logger.error(f"Error reading file content: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/jobs/<job_id>/stages/<stage_id>/tasks/<int:task_index>/logs')
+def get_task_logs(job_id, stage_id, task_index):
+    """Get execution logs for a specific task"""
+    try:
+        from services.execution_service import execution_service
+        from services.jobs_service import JobsService
+        
+        jobs_service = JobsService(Config.DATA_FOLDER)
+        job = jobs_service.get_job(job_id)
+        
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        # Find the task
+        stage = next((s for s in job.get('stages', []) if s['id'] == stage_id), None)
+        if not stage or task_index >= len(stage.get('tasks', [])):
+            return jsonify({'error': 'Task not found'}), 404
+            
+        task = stage['tasks'][task_index]
+        
+        # Get logs from execution service
+        logs = execution_service.get_task_logs(job_id, stage_id, task_index)
+        
+        # Determine status
+        status = task.get('status', 'pending')
+        if status == 'pending' and logs:
+            status = 'running'
+        
+        return jsonify({
+            'status': status,
+            'logs': logs,
+            'task_name': task.get('name', ''),
+            'agent': task.get('agent', '')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting task logs: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Error handlers

@@ -3077,13 +3077,23 @@ function renderInlineJobStages(stages, currentStage) {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                     </svg>
                                 </button>
-                                ${task.status === 'completed' || task.status === 'failed' ? `
-                                    <button class="task-output-btn" onclick="event.stopPropagation(); viewTaskOutput('${stage.id}', ${taskIndex})" title="View Output">
+                                <div class="task-file-actions">
+                                    <button class="task-file-btn input" onclick="event.stopPropagation(); viewTaskFiles('${stage.id}', ${taskIndex}, 'input')" title="View Input Files">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="task-file-btn output" onclick="event.stopPropagation(); viewTaskFiles('${stage.id}', ${taskIndex}, 'output')" title="View Output Files">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                         </svg>
                                     </button>
-                                ` : ''}
+                                    <button class="task-file-btn logs ${task.status === 'running' ? 'active' : ''}" onclick="event.stopPropagation(); viewTaskLogs('${stage.id}', ${taskIndex})" title="View Execution Logs">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="task-config-section" id="taskConfig_${stage.id}_${taskIndex}" style="display: none;">
@@ -4401,6 +4411,8 @@ async function viewTaskOutput(stageId, taskIndex) {
 
 // Show task output modal
 function showTaskOutputModal(output, stageId, taskIndex) {
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    
     // Create modal if it doesn't exist
     let modal = document.getElementById('taskOutputModal');
     if (!modal) {
@@ -4408,18 +4420,43 @@ function showTaskOutputModal(output, stageId, taskIndex) {
         modal.id = 'taskOutputModal';
         modal.className = 'modal';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+            <div class="modal-content" style="max-width: 1200px; width: 90%; max-height: 90vh;">
                 <div class="modal-header">
-                    <h3 id="outputModalTitle">Task Output</h3>
+                    <h3 id="outputModalTitle">Task Files & Output</h3>
                     <button class="modal-close" onclick="closeTaskOutputModal()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 120px);">
-                    <div id="taskOutputContent" style="white-space: pre-wrap; font-family: monospace; font-size: 14px; line-height: 1.6; background: #f5f5f5; padding: 20px; border-radius: 8px;">
-                        Loading output...
+                <div class="modal-body" style="overflow: hidden; height: calc(90vh - 120px); display: flex; flex-direction: column;">
+                    <!-- File Browser Navigation -->
+                    <div id="fileBrowserNav" style="padding: 10px 0; border-bottom: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-sm" onclick="toggleFileBrowser()" title="Toggle File Browser">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                        </button>
+                        <div id="breadcrumb" style="flex: 1; display: flex; align-items: center; gap: 5px; font-size: 14px; color: #666;">
+                            <span>Task Files</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Main Content Area -->
+                    <div style="flex: 1; display: flex; overflow: hidden;">
+                        <!-- File Browser -->
+                        <div id="fileBrowser" style="width: 250px; border-right: 1px solid #e0e0e0; overflow-y: auto; padding: 15px; background: #f8f9fa;">
+                            <div id="fileTree" style="font-size: 14px;">
+                                <div class="loading">Loading file structure...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Viewer -->
+                        <div id="contentViewer" style="flex: 1; overflow-y: auto; padding: 20px;">
+                            <div id="taskOutputContent" style="white-space: pre-wrap; font-family: monospace; font-size: 14px; line-height: 1.6; background: #f5f5f5; padding: 20px; border-radius: 8px;">
+                                Loading output...
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -4442,29 +4479,595 @@ function showTaskOutputModal(output, stageId, taskIndex) {
         document.body.appendChild(modal);
     }
     
-    // Update content
-    const contentDiv = document.getElementById('taskOutputContent');
-    const titleDiv = document.getElementById('outputModalTitle');
-    
-    titleDiv.textContent = `Task Output - Execution ${output.execution_id.split('_').pop()}`;
-    
-    // Store output for copy/download functions
+    // Store context for later use
+    modal.dataset.jobId = jobId;
+    modal.dataset.stageId = stageId;
+    modal.dataset.taskIndex = taskIndex;
     modal.dataset.outputContent = output.content;
     modal.dataset.outputId = output.execution_id;
     
-    // Format the content with syntax highlighting if possible
-    const formattedContent = output.content
-        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>$2</code></pre>')
-        .replace(/`([^`]+)`/g, '<code style="background: #e8e8e8; padding: 2px 4px; border-radius: 3px;">$1</code>')
-        .replace(/##\s+(.+)/g, '<h3 style="color: #3b82f6; margin: 20px 0 10px;">$1</h3>')
-        .replace(/###\s+(.+)/g, '<h4 style="color: #666; margin: 15px 0 8px;">$1</h4>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br>');
+    // Update title
+    const titleDiv = document.getElementById('outputModalTitle');
+    titleDiv.textContent = `Task Files & Output`;
     
-    contentDiv.innerHTML = formattedContent;
+    // Load file tree
+    loadTaskFileTree(jobId, stageId, taskIndex);
+    
+    // Show output content by default
+    showFileContent({
+        type: 'output',
+        content: output.content,
+        name: 'Task Output'
+    });
     
     // Show modal
     modal.classList.add('show');
+}
+
+// Load task file tree
+async function loadTaskFileTree(jobId, stageId, taskIndex, viewType = null) {
+    const fileTreeDiv = document.getElementById('fileTree');
+    
+    try {
+        const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/files`);
+        if (!response.ok) {
+            throw new Error('Failed to load file structure');
+        }
+        
+        const data = await response.json();
+        fileTreeDiv.innerHTML = renderFileTree(data, viewType);
+        
+        // Update breadcrumb with task name
+        document.getElementById('breadcrumb').innerHTML = `
+            <span style="color: #999;">Task:</span>
+            <span style="font-weight: 500;">${data.task_name}</span>
+        `;
+        
+        // If viewType is specified, auto-expand that folder
+        if (viewType && data.folders[viewType]) {
+            const folderElements = fileTreeDiv.querySelectorAll('.folder-header');
+            folderElements.forEach(el => {
+                const folderName = el.querySelector('.folder-name').textContent;
+                if (folderName === viewType) {
+                    el.click(); // Expand the folder
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error loading file tree:', error);
+        fileTreeDiv.innerHTML = '<div class="error">Failed to load file structure</div>';
+    }
+}
+
+// Render file tree HTML
+function renderFileTree(data, highlightFolder = null) {
+    let html = '<div class="file-tree">';
+    
+    // Add folders (input, output, data)
+    for (const [folderName, folderData] of Object.entries(data.folders)) {
+        const isHighlighted = highlightFolder === folderName;
+        
+        if (folderData.exists === false) {
+            html += `
+                <div class="tree-folder empty" style="opacity: 0.5; ${isHighlighted ? 'background: rgba(59, 130, 246, 0.1); border-radius: 4px; padding: 4px;' : ''}">
+                    <span class="folder-icon">📁</span> ${folderName} (empty)
+                </div>
+            `;
+        } else {
+            html += renderTreeNode(folderData, folderName, 0, isHighlighted);
+        }
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+// Render a tree node (folder or file)
+function renderTreeNode(node, name, level, isHighlighted = false) {
+    const indent = level * 20;
+    let html = '';
+    
+    if (node.type === 'folder') {
+        const hasChildren = node.children && node.children.length > 0;
+        const folderId = `folder-${Math.random().toString(36).substr(2, 9)}`;
+        
+        html += `
+            <div class="tree-folder" style="margin-left: ${indent}px;">
+                <div class="folder-header" onclick="toggleFolder('${folderId}')" style="cursor: pointer; padding: 4px 8px; display: flex; align-items: center; gap: 5px; ${isHighlighted && level === 0 ? 'background: rgba(59, 130, 246, 0.1); border-radius: 4px;' : ''}">
+                    <span class="folder-toggle" id="toggle-${folderId}" style="width: 12px; display: inline-block;">
+                        ${hasChildren ? '▶' : ''}
+                    </span>
+                    <span class="folder-icon">📁</span>
+                    <span class="folder-name">${name || node.name}</span>
+                    ${node.children ? `<span style="color: #999; font-size: 12px;">(${node.children.length})</span>` : ''}
+                </div>
+                <div class="folder-contents" id="${folderId}" style="display: none;">
+        `;
+        
+        if (node.children) {
+            for (const child of node.children) {
+                html += renderTreeNode(child, child.name, level + 1, false);
+            }
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+    } else {
+        // File node
+        const fileSize = node.size ? formatFileSize(node.size) : '';
+        html += `
+            <div class="tree-file" style="margin-left: ${indent + 20}px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px;"
+                 onclick="loadFileContent('${node.path}')">
+                <span class="file-icon">${getFileIcon(node.name)}</span>
+                <span class="file-name">${node.name}</span>
+                ${fileSize ? `<span style="color: #999; font-size: 12px;">${fileSize}</span>` : ''}
+            </div>
+        `;
+    }
+    
+    return html;
+}
+
+// Toggle folder visibility
+function toggleFolder(folderId) {
+    const folder = document.getElementById(folderId);
+    const toggle = document.getElementById(`toggle-${folderId}`);
+    
+    if (folder.style.display === 'none') {
+        folder.style.display = 'block';
+        toggle.textContent = '▼';
+    } else {
+        folder.style.display = 'none';
+        toggle.textContent = '▶';
+    }
+}
+
+// Load file content
+async function loadFileContent(filePath) {
+    const modal = document.getElementById('taskOutputModal');
+    const jobId = modal.dataset.jobId;
+    
+    try {
+        const response = await fetch(`/api/jobs/${jobId}/files/content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: filePath })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load file content');
+        }
+        
+        const data = await response.json();
+        showFileContent(data);
+        
+        // Update breadcrumb
+        updateBreadcrumb(filePath);
+        
+    } catch (error) {
+        console.error('Error loading file:', error);
+        showNotification('Failed to load file content', 'error');
+    }
+}
+
+// Show file content in viewer
+function showFileContent(data) {
+    const contentDiv = document.getElementById('taskOutputContent');
+    const modal = document.getElementById('taskOutputModal');
+    
+    if (data.type === 'output') {
+        // Task output content
+        modal.dataset.outputContent = data.content;
+        
+        // Format the content with syntax highlighting
+        const formattedContent = data.content
+            .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>$2</code></pre>')
+            .replace(/`([^`]+)`/g, '<code style="background: #e8e8e8; padding: 2px 4px; border-radius: 3px;">$1</code>')
+            .replace(/##\s+(.+)/g, '<h3 style="color: #3b82f6; margin: 20px 0 10px;">$1</h3>')
+            .replace(/###\s+(.+)/g, '<h4 style="color: #666; margin: 15px 0 8px;">$1</h4>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+        
+        contentDiv.innerHTML = formattedContent;
+    } else {
+        // File content
+        modal.dataset.outputContent = data.content;
+        
+        if (data.binary) {
+            contentDiv.innerHTML = `<div style="text-align: center; color: #666; padding: 40px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 48px; height: 48px; margin: 0 auto 20px; opacity: 0.5;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p>Binary file: ${data.name}</p>
+                <p style="font-size: 14px; color: #999;">${formatFileSize(data.size)}</p>
+            </div>`;
+        } else {
+            // Escape HTML and preserve formatting
+            const escapedContent = data.content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            contentDiv.innerHTML = `<div style="font-family: monospace; white-space: pre-wrap;">${escapedContent}</div>`;
+        }
+    }
+}
+
+// Update breadcrumb navigation
+function updateBreadcrumb(filePath) {
+    const breadcrumb = document.getElementById('breadcrumb');
+    const parts = filePath.split('/');
+    const fileName = parts.pop();
+    
+    let html = '<span style="color: #999;">Path:</span> ';
+    
+    // Show last 3 parts of path
+    const relevantParts = parts.slice(-3);
+    html += relevantParts.map(part => `<span style="color: #666;">${part}</span>`).join(' / ');
+    if (relevantParts.length > 0) html += ' / ';
+    html += `<span style="font-weight: 500;">${fileName}</span>`;
+    
+    breadcrumb.innerHTML = html;
+}
+
+// Toggle file browser visibility
+function toggleFileBrowser() {
+    const browser = document.getElementById('fileBrowser');
+    const viewer = document.getElementById('contentViewer');
+    
+    if (browser.style.display === 'none') {
+        browser.style.display = 'block';
+        viewer.style.marginLeft = '0';
+    } else {
+        browser.style.display = 'none';
+        viewer.style.marginLeft = '20px';
+    }
+}
+
+// Helper function to get file icon
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'md': '📝',
+        'txt': '📄',
+        'json': '📊',
+        'js': '🟨',
+        'py': '🐍',
+        'html': '🌐',
+        'css': '🎨',
+        'log': '📋',
+        'yml': '⚙️',
+        'yaml': '⚙️',
+        'xml': '📐'
+    };
+    return icons[ext] || '📄';
+}
+
+// Helper function to format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// View task files (input or output)
+async function viewTaskFiles(stageId, taskIndex, type = 'output') {
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    if (!jobId) {
+        showNotification('No job selected', 'error');
+        return;
+    }
+    
+    // Show the modal with file tree
+    showTaskFilesModal(jobId, stageId, taskIndex, type);
+}
+
+// Show task files modal
+function showTaskFilesModal(jobId, stageId, taskIndex, viewType) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('taskOutputModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'taskOutputModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 1200px; width: 90%; max-height: 90vh;">
+                <div class="modal-header">
+                    <h3 id="outputModalTitle">Task Files</h3>
+                    <button class="modal-close" onclick="closeTaskOutputModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="overflow: hidden; height: calc(90vh - 120px); display: flex; flex-direction: column;">
+                    <!-- File Browser Navigation -->
+                    <div id="fileBrowserNav" style="padding: 10px 0; border-bottom: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-sm" onclick="toggleFileBrowser()" title="Toggle File Browser">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                        </button>
+                        <div id="breadcrumb" style="flex: 1; display: flex; align-items: center; gap: 5px; font-size: 14px; color: #666;">
+                            <span>Task Files</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Main Content Area -->
+                    <div style="flex: 1; display: flex; overflow: hidden;">
+                        <!-- File Browser -->
+                        <div id="fileBrowser" style="width: 250px; border-right: 1px solid #e0e0e0; overflow-y: auto; padding: 15px; background: #f8f9fa;">
+                            <div id="fileTree" style="font-size: 14px;">
+                                <div class="loading">Loading file structure...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Viewer -->
+                        <div id="contentViewer" style="flex: 1; overflow-y: auto; padding: 20px;">
+                            <div id="taskOutputContent" style="white-space: pre-wrap; font-family: monospace; font-size: 14px; line-height: 1.6; background: #f5f5f5; padding: 20px; border-radius: 8px;">
+                                <div style="text-align: center; color: #666; padding: 40px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 48px; height: 48px; margin: 0 auto 20px; opacity: 0.3;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                    </svg>
+                                    <p>Select a file from the tree to view its contents</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Store context for later use
+    modal.dataset.jobId = jobId;
+    modal.dataset.stageId = stageId;
+    modal.dataset.taskIndex = taskIndex;
+    modal.dataset.viewType = viewType;
+    
+    // Update title based on view type
+    const titleDiv = document.getElementById('outputModalTitle');
+    titleDiv.innerHTML = `Task Files - <span style="color: ${viewType === 'input' ? '#3b82f6' : '#22c55e'};">${viewType.charAt(0).toUpperCase() + viewType.slice(1)}</span>`;
+    
+    // Load file tree
+    loadTaskFileTree(jobId, stageId, taskIndex, viewType);
+    
+    // Show modal
+    modal.classList.add('show');
+}
+
+// View task logs
+async function viewTaskLogs(stageId, taskIndex) {
+    const jobId = document.getElementById('inlineJobDetail').dataset.jobId;
+    if (!jobId) {
+        showNotification('No job selected', 'error');
+        return;
+    }
+    
+    // Show logs modal
+    showTaskLogsModal(jobId, stageId, taskIndex);
+}
+
+// Show task logs modal
+function showTaskLogsModal(jobId, stageId, taskIndex) {
+    // Create or get logs modal
+    let modal = document.getElementById('taskLogsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'taskLogsModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 900px; width: 90%; max-height: 90vh;">
+                <div class="modal-header">
+                    <h3 id="logsModalTitle">Execution Logs</h3>
+                    <button class="modal-close" onclick="closeTaskLogsModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="overflow: hidden; height: calc(90vh - 120px); display: flex; flex-direction: column;">
+                    <!-- Logs Header -->
+                    <div style="padding: 10px 0; border-bottom: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center;">
+                        <span id="logsStatus" style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Ready</span>
+                        </span>
+                        <div style="flex: 1;"></div>
+                        <button class="btn btn-sm" onclick="clearLogs()" title="Clear Logs">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-sm" onclick="toggleAutoScroll()" title="Toggle Auto-scroll">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5 5m0 0l5-5m-5 5V3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Logs Content -->
+                    <div id="logsContent" style="flex: 1; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; line-height: 1.5; padding: 15px;">
+                        <div style="color: #888;">Waiting for execution to start...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Store context
+    modal.dataset.jobId = jobId;
+    modal.dataset.stageId = stageId;
+    modal.dataset.taskIndex = taskIndex;
+    modal.dataset.autoScroll = 'true';
+    
+    // Clear previous logs
+    document.getElementById('logsContent').innerHTML = '<div style="color: #888;">Loading logs...</div>';
+    
+    // Load existing logs if any
+    loadTaskLogs(jobId, stageId, taskIndex);
+    
+    // Show modal
+    modal.classList.add('show');
+}
+
+// Load task logs
+async function loadTaskLogs(jobId, stageId, taskIndex) {
+    const logsContent = document.getElementById('logsContent');
+    
+    try {
+        // Check if there's an active execution
+        const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/logs`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayLogs(data.logs || []);
+            
+            // Update status
+            updateLogsStatus(data.status || 'completed');
+            
+            // If task is running, start polling for updates
+            if (data.status === 'running') {
+                startLogPolling(jobId, stageId, taskIndex);
+            }
+        } else {
+            logsContent.innerHTML = '<div style="color: #888;">No logs available for this task.</div>';
+        }
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        logsContent.innerHTML = '<div style="color: #f44336;">Failed to load logs.</div>';
+    }
+}
+
+// Display logs in the modal
+function displayLogs(logs) {
+    const logsContent = document.getElementById('logsContent');
+    
+    if (logs.length === 0) {
+        logsContent.innerHTML = '<div style="color: #888;">No logs available.</div>';
+        return;
+    }
+    
+    const html = logs.map(log => {
+        const timestamp = new Date(log.timestamp).toLocaleTimeString();
+        const levelColor = {
+            'info': '#4caf50',
+            'warning': '#ff9800',
+            'error': '#f44336',
+            'debug': '#2196f3'
+        }[log.level] || '#888';
+        
+        return `
+            <div style="margin-bottom: 4px;">
+                <span style="color: #666;">[${timestamp}]</span>
+                <span style="color: ${levelColor}; font-weight: bold;">[${log.level.toUpperCase()}]</span>
+                <span>${escapeHtml(log.message)}</span>
+            </div>
+        `;
+    }).join('');
+    
+    logsContent.innerHTML = html;
+    
+    // Auto-scroll to bottom if enabled
+    if (document.getElementById('taskLogsModal').dataset.autoScroll === 'true') {
+        logsContent.scrollTop = logsContent.scrollHeight;
+    }
+}
+
+// Update logs status indicator
+function updateLogsStatus(status) {
+    const statusEl = document.getElementById('logsStatus');
+    const statusDot = statusEl.querySelector('.status-dot');
+    const statusText = statusEl.querySelector('.status-text');
+    
+    const statusConfig = {
+        'running': { color: '#4caf50', text: 'Running', animate: true },
+        'completed': { color: '#2196f3', text: 'Completed', animate: false },
+        'failed': { color: '#f44336', text: 'Failed', animate: false },
+        'pending': { color: '#ff9800', text: 'Pending', animate: false }
+    };
+    
+    const config = statusConfig[status] || statusConfig['pending'];
+    
+    statusDot.style.cssText = `
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: ${config.color};
+        ${config.animate ? 'animation: pulse 2s infinite;' : ''}
+    `;
+    
+    statusText.textContent = config.text;
+}
+
+// Toggle auto-scroll
+function toggleAutoScroll() {
+    const modal = document.getElementById('taskLogsModal');
+    const autoScroll = modal.dataset.autoScroll === 'true';
+    modal.dataset.autoScroll = autoScroll ? 'false' : 'true';
+    showNotification(`Auto-scroll ${autoScroll ? 'disabled' : 'enabled'}`, 'info');
+}
+
+// Clear logs display
+function clearLogs() {
+    document.getElementById('logsContent').innerHTML = '<div style="color: #888;">Logs cleared.</div>';
+}
+
+// Close logs modal
+function closeTaskLogsModal() {
+    const modal = document.getElementById('taskLogsModal');
+    if (modal) {
+        modal.classList.remove('show');
+        stopLogPolling();
+    }
+}
+
+// Polling for real-time logs
+let logPollingInterval = null;
+
+function startLogPolling(jobId, stageId, taskIndex) {
+    // Clear any existing polling
+    stopLogPolling();
+    
+    // Poll every 2 seconds
+    logPollingInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/logs`);
+            if (response.ok) {
+                const data = await response.json();
+                displayLogs(data.logs || []);
+                updateLogsStatus(data.status || 'completed');
+                
+                // Stop polling if task is no longer running
+                if (data.status !== 'running') {
+                    stopLogPolling();
+                }
+            }
+        } catch (error) {
+            console.error('Error polling logs:', error);
+        }
+    }, 2000);
+}
+
+function stopLogPolling() {
+    if (logPollingInterval) {
+        clearInterval(logPollingInterval);
+        logPollingInterval = null;
+    }
+}
+
+// Helper to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Close task output modal
@@ -4529,6 +5132,9 @@ async function executeTask(stageId, taskIndex) {
     
     // Show executing status
     showNotification('Executing task with Claude...', 'info');
+    
+    // Open logs modal to show real-time execution
+    viewTaskLogs(stageId, taskIndex);
     
     try {
         const response = await fetch(`/api/jobs/${jobId}/stages/${stageId}/tasks/${taskIndex}/execute`, {
