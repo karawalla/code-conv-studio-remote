@@ -228,3 +228,34 @@ When "Modernization" is selected:
 - **Task Differences**: Some tasks are modified based on PM setting
   - With PM: "Update Jira with Findings"
   - Without PM: "Document Findings"
+
+## Knowledge Store
+
+### 8. Knowledge Store Screen
+- **HTML Section**: `<div id="knowledgePage" class="page">`
+- **Navigation**: Left sidebar has "Knowledge Store" tab
+- **Key Functions**:
+  - `loadKnowledgeTopics()` - Loads knowledge topics with mockup data
+  - `toggleKnowledge(stageId, taskIndex, enabled)` - Toggles knowledge context for tasks
+  - `applyKnowledge(stageId, taskIndex)` - Deprecated function (replaced by toggle)
+- **Features**:
+  - Statistics dashboard showing topics count, reading hours, resources, and active research
+  - Topics table with categories, completion scores, resources info, and status
+  - Diverse topics covering Java, C#, Rust, AI patterns, cloud migrations, etc.
+
+### Task Toolbar & Knowledge Toggle
+- **Location**: Each task in job stages timeline
+- **HTML Structure**: `.task-toolbar` container with Execute button and Knowledge toggle
+- **Key Functions**:
+  - `executeTask(stageId, taskIndex)` - Executes individual task
+  - `toggleKnowledge(stageId, taskIndex, enabled)` - Enables/disables knowledge context
+- **CSS Classes**:
+  - `.task-toolbar` - Container for task actions
+  - `.toolbar-btn` - Button styling
+  - `.knowledge-toggle` - Toggle switch container
+  - `.toggle-slider` - Visual toggle switch element
+- **Features**:
+  - Execute button with blue theme and play icon
+  - Knowledge Store toggle with purple theme when enabled
+  - Larger icons (20px) for better visibility
+  - Toggle state tracked in `window.knowledgeEnabledTasks`
